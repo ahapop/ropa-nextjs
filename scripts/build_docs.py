@@ -49,6 +49,19 @@ def add_toc(doc):
     _field(p, 'TOC \\o "1-3" \\h \\z \\u',
            placeholder="(สารบัญจะสร้างอัตโนมัติเมื่อเปิดไฟล์ · หากไม่ขึ้น คลิกขวาที่นี่ > Update Field)")
 
+def add_header(doc, title=""):
+    hp = doc.sections[0].header.paragraphs[0]
+    if os.path.exists(LOGO):
+        hp.add_run().add_picture(LOGO, height=Inches(0.42))   # โลโก้ซ้าย
+    if title:
+        hp.add_run("\t\t")                                    # แท็บไปขวาสุด
+        rt = hp.add_run(title); runset(rt); rt.font.size = Pt(11); rt.font.color.rgb = MUTED
+    # เส้นคั่นใต้ header
+    pPr = hp._p.get_or_add_pPr()
+    pbdr = OxmlElement('w:pBdr'); bottom = OxmlElement('w:bottom')
+    bottom.set(qn('w:val'), 'single'); bottom.set(qn('w:sz'), '6'); bottom.set(qn('w:space'), '4'); bottom.set(qn('w:color'), 'B0B8C4')
+    pbdr.append(bottom); pPr.append(pbdr)
+
 def add_footer(doc):
     fp = doc.sections[0].footer.paragraphs[0]; fp.alignment = WD_ALIGN_PARAGRAPH.CENTER
     r0 = fp.add_run("หน้า "); runset(r0); r0.font.size = Pt(12); r0.font.color.rgb = MUTED
@@ -106,6 +119,7 @@ def build(md, out, title, subtitle):
         except KeyError: pass
 
     set_update_fields(doc)   # ให้ Word เสนออัปเดต field (สารบัญ/เลขหน้า) ตอนเปิด
+    add_header(doc, title)   # โลโก้ + ชื่อระบบ ที่ header ทุกหน้า
     add_footer(doc)          # เลขหน้าใน footer
 
     # ปก — โลโก้
