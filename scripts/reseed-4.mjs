@@ -1,30 +1,27 @@
 import { readFileSync } from 'fs';
 for(const line of readFileSync(new URL('../.env.local', import.meta.url),'utf8').split('\n')){ const m=line.match(/^([A-Z_]+)=(.*)$/); if(m&&!process.env[m[1]])process.env[m[1]]=m[2].trim(); }
-const { companiesForOrg } = await import('../lib/master.js');
 const { listUsers, insertRecordsWithOwners, sql } = await import('../lib/db.js');
 const { makeDummyByDept } = await import('../lib/dummy.js');
 
-// ข้อมูลพื้นฐาน (หน่วยงานกลาง/ไม่มีสีสาย) ต้องมีครบทุกบริษัท: BID เท่ากับ BTSC และ EBM/NBM
-// ก็มี base ด้วย  ·  หน่วยงานที่มีสีสาย → อยู่เฉพาะบริษัทของสายนั้น (เหลือง=EBM, ชมพู=NBM, ทั้งคู่=EBM+NBM)
-function targetCompanies(org){
-  const c = companiesForOrg(org);
-  return (c.length === 1 && c[0] === 'BTSC') ? ['BTSC','BID','EBM','NBM'] : c;
-}
+// บริษัท = โดเมนอีเมลของ user (ตรงกับ lib/access.js) · แต่ละ user สร้าง record ของบริษัทตัวเอง
+// และเป็นเจ้าของเอง → ลำดับชั้น ฝ่าย/ส่วน/แผนก ทำงานแยกตามบริษัท
+const DOMAIN_COMPANY = { 'bts.co.th':'BTSC', 'bid.com':'BID', 'ebm.com':'EBM', 'nbm.com':'NBM' };
+const companyOfEmail = (email) => DOMAIN_COMPANY[(email.split('@')[1]||'').toLowerCase()] || null;
 console.log('clearing records...');
 await sql`DELETE FROM records`;
 const users = await listUsers();
 const pairs = [];
 for(const u of users){
   if(u.role === 'admin') continue;
+  const company = companyOfEmail(u.email);
+  if(!company) continue;
   let org='', dept='';
   if(u.department){ org=u.section; dept=u.department; }
   else if(u.section){ org=u.section; }
   else if(u.division){ org=u.division; }
   else continue;
   if(!org) continue;
-  for(const company of targetCompanies(org)){
-    for(const r of makeDummyByDept(4, org, dept)){ r.company = company; pairs.push({ rec:r, owner:u.id }); }
-  }
+  for(const r of makeDummyByDept(4, org, dept)){ r.company = company; pairs.push({ rec:r, owner:u.id }); }
 }
 console.log('inserting', pairs.length, 'records ...');
 await insertRecordsWithOwners(pairs);
