@@ -59,6 +59,8 @@ export default function RecordList(props){
   };
   const arrow = (k) => sortKey===k ? (sortDir===1 ? '▲' : '▼') : '';
   const toggleCollapse = (c) => setCollapsed(prev => { const n = new Set(prev); n.has(c) ? n.delete(c) : n.add(c); return n; });
+  // เปิดจัดกลุ่ม → ยุบทุกกลุ่มเป็นค่าเริ่มต้น (โชว์เฉพาะหัวบริษัท)
+  const toggleGroupBy = () => setGroupByCompany(v => { const next = !v; if(next) setCollapsed(new Set(groups.map(g => g.company))); return next; });
 
   const renderRow = (r, n) => {
     const act = r.s1?.activity==="อื่นๆ" ? (r.s1?.activityOther||"อื่นๆ") : (r.s1?.activity||"—");
@@ -92,7 +94,7 @@ export default function RecordList(props){
         </div>
         <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
           <button className={"btn btn-sm " + (groupByCompany ? "btn-primary" : "btn-ghost")}
-                  onClick={()=>setGroupByCompany(v=>!v)} title="สลับการแสดงผลแบบแบ่งกลุ่มตามบริษัท">
+                  onClick={toggleGroupBy} title="สลับการแสดงผลแบบแบ่งกลุ่มตามบริษัท (เริ่มแบบยุบ)">
             📑 จัดกลุ่มบริษัท {groupByCompany ? "✓" : ""}
           </button>
           <button className="btn btn-ghost btn-sm" onClick={onSaveXML}>💾 Save XML (ไฟล์)</button>
