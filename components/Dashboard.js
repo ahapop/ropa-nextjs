@@ -37,7 +37,7 @@ export default function Dashboard({ records, onBack, onChangePin, onLock, onEdit
       if((r.s2?.sensitive||[]).length>0 && (r.s2?.lawfulSens||[]).length===0) rs.push({t:'มีข้อมูลอ่อนไหวแต่ไม่ระบุฐานกฎหมาย (ม.26)',lv:'warn'});
       if(r.s1?.special && r.s1.special!=='ไม่มี' && r.s1?.consent==='N') rs.push({t:'มีบุคคลพิเศษแต่ Consent = N',lv:'warn'});
       if(r.s5?.transfer==='มีการส่งออกนอกประเทศ' && (r.s5?.safeguard||[]).length===0) rs.push({t:'โอนต่างประเทศแต่ไม่มี safeguard (ม.28/29)',lv:'warn'});
-      if(r.s4?.disclose==='มีการเปิดเผย' && r.s4?.dpa!=='Yes' && r.s4?.contract!=='Yes') rs.push({t:'เปิดเผยภายนอกแต่ไม่มี DPA/สัญญา',lv:'warn'});
+      if(r.s4?.disclose==='มีการเปิดเผย' && (r.s4?.items||[]).some(it=> it && it.dpa!=='Yes' && it.contract!=='Yes')) rs.push({t:'เปิดเผยภายนอกแต่ไม่มี DPA/สัญญา',lv:'warn'});
       if(!recordComplete(r)) rs.push({t:'ยังกรอกไม่ครบ (ไม่สมบูรณ์)',lv:'amber'});
       if(rs.length) risks.push({ r, rs });
     });

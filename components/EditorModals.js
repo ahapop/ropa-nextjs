@@ -4,7 +4,7 @@ import { Modal, ModalHead, ModalFoot } from "./ui";
 import { useToast } from "./toast";
 import { RadioF, SelectF, TextF, ChecksF } from "./fields";
 import { MASTER } from "@/lib/master";
-import { getDeep, setDeep, clone, blankS3Item, blankS6Item } from "@/lib/util";
+import { getDeep, setDeep, clone, blankS3Item, blankS6Item, blankS4Item } from "@/lib/util";
 import { emptyEditorFids } from "@/lib/stepvalid";
 
 function useEditState(prefix, item, open){
@@ -82,6 +82,66 @@ export function S3Editor({ open, item, index, existingItems, onCancel, onSave })
         <ChecksF fid="s3edit.sensitive" label="3.4 ข้อมูลส่วนบุคคลอ่อนไหว" options={MASTER.sensitiveData} hint="ถ้าเลือกข้อนี้ ต้องระบุฐานกฎหมายอ่อนไหว (3.6) ด้วย" {...p} />
         <ChecksF fid="s3edit.lawful" label="3.5 ฐานทางกฎหมาย ตาม ม.39(6)" options={MASTER.lawfulBasis} req hint="DPD แก้ไขได้" {...p} />
         <ChecksF fid="s3edit.lawfulSens" label="3.6 ฐานทางกฎหมายในการประมวลผลข้อมูลอ่อนไหว" options={MASTER.lawfulBasisSensitive} hint="บังคับกรอกเมื่อเลือกข้อมูลอ่อนไหว (3.4)" {...p} />
+      </div>
+      <ModalFoot>
+        <button className="btn btn-ghost" onClick={onCancel}>ยกเลิก</button>
+        <button className="btn btn-primary" onClick={save}>บันทึกรายการนี้</button>
+      </ModalFoot>
+    </Modal>
+  );
+}
+
+export function S4Editor({ open, item, index, existingItems, onCancel, onSave }){
+  const toast = useToast();
+  const st = useEditState("s4edit", item || blankS4Item(), open);
+  if(!open) return null;
+  const { edit, setEdit, errors, setErrors, get, set } = st;
+  const onFile = (e) => {
+    const f = e.target.files[0]; e.target.value = "";
+    if(!f) return;
+    if(f.size > 1024*1024){ toast("ไฟล์ใหญ่เกิน 1MB — กรุณาเลือกไฟล์ที่เล็กกว่า","err"); return; }
+    const reader = new FileReader();
+    reader.onload = () => setEdit(prev => ({ ...prev, recipientFile: { name:f.name, type:f.type, size:f.size, dataUrl:reader.result } }));
+    reader.readAsDataURL(f);
+  };
+  const removeFile = () => setEdit(prev => ({ ...prev, recipientFile:null }));
+  const save = () => {
+    const empties = emptyEditorFids("s4", { s4edit: edit });
+    if(empties.length){ setErrors(new Set(empties)); toast("กรุณากรอกข้อมูลให้ครบทุกช่องที่จำเป็น","err"); return; }
+    const r = (edit.recipient||"").toString().trim();
+    const dupe = (existingItems||[]).some((it,i)=> i!==index && (it.recipient||"").toString().trim()===r);
+    if(dupe){ toast("ผู้รับข้อมูลนี้มีอยู่แล้ว — โปรดเลือกผู้รับอื่น","err"); return; }
+    onSave(clone(edit));
+  };
+  const p = { get, set, errors };
+  const file = edit.recipientFile;
+  return (
+    <Modal z={80} maxWidth={760} flex onBackdrop={onCancel}>
+      <ModalHead title={index>=0 ? "แก้ไขผู้รับข้อมูล (การเปิดเผย)" : "เพิ่มผู้รับข้อมูล (การเปิดเผย)"}
+                 sub="1 ผู้รับข้อมูล (4.1) ต่อ 1 รายการ พร้อมรายละเอียด 4.2–4.7 ของผู้รับนั้น" />
+      <div style={{ padding:"18px 22px", overflow:"auto" }}>
+        <SelectF fid="s4edit.recipient" label="4.1 บุคคลภายนอกผู้รับข้อมูลส่วนบุคคล" options={MASTER.externalRecipients} req hint="เลือก 1 ผู้รับ (ดึงจากชีท “การเปิดเผยข้อมูลส่วนบุคคล”)" {...p} />
+        <TextF fid="s4edit.recipientDetail" label="4.2 รายละเอียดผู้รับข้อมูลส่วนบุคคล" req area hint="ชื่อผู้ติดต่อ / ชื่อบริษัท / ที่อยู่" {...p} />
+        <div className="field" style={{ marginTop:"-8px" }}>
+          <div className="hint" style={{ marginBottom:8 }}>📎 แนบไฟล์ประกอบ (≤ 1MB) — ใช้กรณีรายละเอียดมากกว่า 5 รายการ</div>
+          {file ? (
+            <div style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 10px", border:"1px solid var(--line)", borderRadius:8, background:"#fcfdff" }}>
+              <span style={{ flex:1, fontSize:13, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>📄 {file.name} <span className="muted">({Math.round((file.size||0)/1024)} KB)</span></span>
+              <a className="btn btn-ghost btn-sm" href={file.dataUrl} download={file.name}>⬇ ดาวน์โหลด</a>
+              <button type="button" className="btn btn-danger btn-sm" onClick={removeFile}>ลบไฟล์</button>
+            </div>
+          ) : (
+            <label className="btn btn-ghost btn-sm" style={{ cursor:"pointer", display:"inline-flex" }}>
+              📎 เลือกไฟล์แนบ
+              <input type="file" style={{ display:"none" }} onChange={onFile} />
+            </label>
+          )}
+        </div>
+        <SelectF fid="s4edit.status" label="4.3 สถานะของผู้รับข้อมูล" options={MASTER.recipientStatus} hint="เลือก 1 สถานะ · DPD แก้ไขได้" {...p} />
+        <TextF fid="s4edit.purpose" label="4.4 วัตถุประสงค์ของการเปิดเผยข้อมูล" req area hint="รายละเอียดกิจกรรม" {...p} />
+        <RadioF fid="s4edit.contract" label="4.5 มีสัญญาว่าจ้างหรือไม่" options={['Yes','No']} req {...p} />
+        <ChecksF fid="s4edit.method" label="4.6 วิธีการส่ง/เปิดเผยข้อมูลส่วนบุคคล" options={MASTER.disclosureMethods} req hint="ดึงจากชีท “รูปแบบการเปิดเผยข้อมูลส่วนบุคคล”" {...p} />
+        <RadioF fid="s4edit.dpa" label="4.7 มี DPA หรือไม่" options={['Yes','No']} req hint="DPD แก้ไขได้" {...p} />
       </div>
       <ModalFoot>
         <button className="btn btn-ghost" onClick={onCancel}>ยกเลิก</button>

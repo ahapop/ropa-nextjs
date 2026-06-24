@@ -9,7 +9,7 @@ import RecorderModal from "@/components/RecorderModal";
 import DataMapModal from "@/components/DataMapModal";
 import { ExcelModal, PinModal } from "@/components/MiscModals";
 import { PIN_KEY } from "@/lib/master";
-import { loadRecords, persistRecords, blankRecord, clone, uid, nowStr, recName, migrateS3, migrateS6 } from "@/lib/util";
+import { loadRecords, persistRecords, blankRecord, clone, uid, nowStr, recName, migrateS3, migrateS4, migrateS6 } from "@/lib/util";
 import { buildXML, parseXML } from "@/lib/xmlio";
 
 function App(){
@@ -51,7 +51,7 @@ function App(){
   };
   const editRecord = (id) => {
     const found = records.find(r => r.id===id); if(!found) return;
-    const rec = migrateS6(migrateS3(clone(found)));
+    const rec = migrateS6(migrateS4(migrateS3(clone(found))));
     setCurrent(rec); setView("form");
   };
   const duplicateRecord = (id) => {

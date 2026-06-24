@@ -1,12 +1,12 @@
 "use client";
 import { useState } from "react";
 import { MASTER, STEPS, STEP_DESC } from "@/lib/master";
-import { getDeep, setDeep, clone, recName, nowStr, blankS3Item, blankS6Item } from "@/lib/util";
+import { getDeep, setDeep, clone, recName, nowStr, blankS3Item, blankS6Item, blankS4Item } from "@/lib/util";
 import { isStepComplete, EXTRA_RULES } from "@/lib/validate";
 import { emptyRequiredFids } from "@/lib/stepvalid";
 import { useToast } from "./toast";
 import { TextF, SelectF, RadioF, ChecksF } from "./fields";
-import { S3Editor, S6Editor } from "./EditorModals";
+import { S3Editor, S4Editor, S6Editor } from "./EditorModals";
 import RecorderModal from "./RecorderModal";
 import DataMapModal from "./DataMapModal";
 import { RejectModal, SentModal } from "./MiscModals";
@@ -15,6 +15,8 @@ function ItemGrid({ kind, items, onEdit, onRemove }){
   if(!items.length){
     const txt = kind==='s3'
       ? 'ยังไม่มีฝ่ายงานที่แบ่งปัน — กดปุ่ม “➕ เพิ่มฝ่ายงานที่แบ่งปัน” เพื่อเพิ่มรายการ'
+      : kind==='s4'
+      ? 'ยังไม่มีผู้รับข้อมูล — กดปุ่ม “➕ เพิ่มผู้รับข้อมูล” เพื่อเพิ่มรายการ'
       : 'ยังไม่มีประเภทการเก็บรักษา — กดปุ่ม “➕ เพิ่มประเภทการเก็บรักษา” เพื่อเพิ่มรายการ';
     return <div className="muted" style={{ padding:16, textAlign:"center", border:"1px dashed var(--line)", borderRadius:8 }}>{txt}</div>;
   }
@@ -22,6 +24,8 @@ function ItemGrid({ kind, items, onEdit, onRemove }){
   const list = a => (Array.isArray(a)&&a.length) ? a.join(' · ') : '—';
   const head = kind==='s3'
     ? ['#','3.1 ฝ่ายงาน / ส่วนงาน','3.2 วัตถุประสงค์','3.3 ข้อมูลทั่วไป','3.4 ข้อมูลอ่อนไหว','3.5 ฐานกฎหมาย','3.6 ฐานกฎหมาย (อ่อนไหว)','จัดการ']
+    : kind==='s4'
+    ? ['#','4.1 ผู้รับข้อมูล','4.2 รายละเอียด / ไฟล์','4.3 สถานะ','4.4 วัตถุประสงค์','4.5 สัญญา','4.6 วิธีส่ง','4.7 DPA','จัดการ']
     : ['#','6.1 ประเภทการเก็บรักษา','6.2 เริ่มนับจาก','6.3 ระยะเวลา','6.4 เหตุผล/ฐานกฎหมาย','6.5 เก็บตามกฎหมาย','6.6 มาตรการกายภาพ','6.7 มาตรการเทคนิค','6.8 แหล่งที่จัดเก็บ','6.9 วิธีลบ/ทำลาย','จัดการ'];
   const minW = kind==='s3' ? 1080 : 1180;
   return (
@@ -37,6 +41,13 @@ function ItemGrid({ kind, items, onEdit, onRemove }){
                   <td><b>{cell(it.org)}</b></td><td>{cell(it.purpose)}</td>
                   <td>{list(it.general)}</td><td>{list(it.sensitive)}</td>
                   <td>{list(it.lawful)}</td><td>{list(it.lawfulSens)}</td>
+                </>
+              ) : kind==='s4' ? (
+                <>
+                  <td><b>{cell(it.recipient)}</b></td>
+                  <td>{cell(it.recipientDetail)}{it.recipientFile ? <span title={it.recipientFile.name}> 📎</span> : null}</td>
+                  <td>{cell(it.status)}</td><td>{cell(it.purpose)}</td>
+                  <td>{cell(it.contract)}</td><td>{list(it.method)}</td><td>{cell(it.dpa)}</td>
                 </>
               ) : (
                 <>
@@ -63,6 +74,7 @@ export default function Wizard({ current, setCurrent, isAdmin, onExit, onUpsert,
   const [stepIdx, setStepIdx] = useState(0);
   const [errors, setErrors] = useState(new Set());
   const [s3ed, setS3ed] = useState({ open:false, index:-1, item:null });
+  const [s4ed, setS4ed] = useState({ open:false, index:-1, item:null });
   const [s6ed, setS6ed] = useState({ open:false, index:-1, item:null });
   const [recEdit, setRecEdit] = useState(false);
   const [mapOpen, setMapOpen] = useState(false);
@@ -120,6 +132,21 @@ export default function Wizard({ current, setCurrent, isAdmin, onExit, onUpsert,
     setS3ed({ open:false, index:-1, item:null });
   };
   const removeS3 = (i) => { if(!confirm('ลบฝ่ายงานที่แบ่งปันนี้?')) return; setCurrent(prev=>{ const items=(prev.s3?.items||[]).slice(); items.splice(i,1); return setDeep(prev,'s3.items',items); }); };
+
+  const openS4 = (index) => {
+    const items = current.s4?.items || [];
+    if(index<0 && items.length>=MASTER.externalRecipients.length){ toast('เพิ่มครบทุกผู้รับข้อมูลแล้ว','err'); return; }
+    setS4ed({ open:true, index, item: index>=0 ? clone(items[index]) : blankS4Item() });
+  };
+  const saveS4 = (item) => {
+    setCurrent(prev => {
+      const items = (prev.s4?.items||[]).slice();
+      if(s4ed.index>=0) items[s4ed.index]=item; else items.push(item);
+      return setDeep(prev,'s4.items',items);
+    });
+    setS4ed({ open:false, index:-1, item:null });
+  };
+  const removeS4 = (i) => { if(!confirm('ลบผู้รับข้อมูลนี้?')) return; setCurrent(prev=>{ const items=(prev.s4?.items||[]).slice(); items.splice(i,1); return setDeep(prev,'s4.items',items); }); };
 
   const openS6 = (index) => {
     const items = current.s6?.items || [];
@@ -190,14 +217,12 @@ export default function Wizard({ current, setCurrent, isAdmin, onExit, onUpsert,
   else if(sk==='s4') body = (<>
     <RadioF fid="s4.disclose" label="4. การเปิดเผยข้อมูลส่วนบุคคล (External Disclosure)" options={['มีการเปิดเผย','ไม่มีการเปิดเผย']} req hint="การส่งข้อมูลออกไปยังบุคคล/บริษัทภายนอก" {...p} />
     {s4on &&
-      <div className="sectionbox">
-        <ChecksF fid="s4.recipient" label="4.1 บุคคลภายนอกผู้รับข้อมูลส่วนบุคคล" options={MASTER.externalRecipients} req hint="ดึงจากชีท “การเปิดเผยข้อมูลส่วนบุคคล”" {...p} />
-        <TextF fid="s4.recipientDetail" label="4.2 รายละเอียดผู้รับข้อมูลส่วนบุคคล" req area hint="ชื่อผู้ติดต่อ / ชื่อบริษัท / ที่อยู่ — หากกรอก 4.1 ต้องกรอก 4.2" {...p} />
-        <ChecksF fid="s4.status" label="4.3 สถานะของผู้รับข้อมูล" options={MASTER.recipientStatus} hint="ดึงจากชีท “สถานะของผู้รับข้อมูล” · DPD แก้ไขได้" {...p} />
-        <TextF fid="s4.purpose" label="4.4 วัตถุประสงค์ของการเปิดเผยข้อมูล" req area hint="รายละเอียดกิจกรรม" {...p} />
-        <RadioF fid="s4.contract" label="4.5 มีสัญญาว่าจ้างหรือไม่" options={['Yes','No']} req {...p} />
-        <ChecksF fid="s4.method" label="4.6 วิธีการส่ง/เปิดเผยข้อมูลส่วนบุคคล" options={MASTER.disclosureMethods} req hint="ดึงจากชีท “รูปแบบการเปิดเผยข้อมูลส่วนบุคคล”" {...p} />
-        <RadioF fid="s4.dpa" label="4.7 มี DPA หรือไม่" options={['Yes','No']} req hint="DPD แก้ไขได้" {...p} />
+      <div>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:10, margin:"2px 2px 10px" }}>
+          <div className="hint" style={{ margin:0 }}>แต่ละ “ผู้รับข้อมูล” (4.1) คือ 1 รายการ มีรายละเอียด 4.2–4.7 ของตัวเอง · เพิ่ม/แก้ไขทีละรายการ (ผู้รับไม่ซ้ำกัน)</div>
+          <button type="button" className="btn btn-primary btn-sm" style={{ whiteSpace:"nowrap" }} onClick={()=>openS4(-1)}>➕ เพิ่มผู้รับข้อมูล</button>
+        </div>
+        <ItemGrid kind="s4" items={current.s4?.items||[]} onEdit={openS4} onRemove={removeS4} />
       </div>}
   </>);
   else if(sk==='s5') body = (<>
@@ -243,6 +268,8 @@ export default function Wizard({ current, setCurrent, isAdmin, onExit, onUpsert,
           <div className="recorder">
             ผู้บันทึก: <b>{recName(current)||'-'}</b><br />
             ตำแหน่ง: {current.recorder?.position||'-'} · เบอร์ {current.recorder?.phone||'-'}<br />
+            ฝ่าย: {current.recorder?.division||'-'}<br />
+            ส่วน: {current.recorder?.section||'-'}<br />
             บริษัท: <b>{current.company||'-'}</b>
             <button className="btn btn-ghost btn-sm" style={{ marginTop:8, padding:"3px 8px", fontSize:11 }} onClick={()=>setRecEdit(true)}>แก้ไขผู้บันทึก</button>
           </div>
@@ -291,6 +318,8 @@ export default function Wizard({ current, setCurrent, isAdmin, onExit, onUpsert,
 
       <S3Editor open={s3ed.open} item={s3ed.item} index={s3ed.index} existingItems={current.s3?.items||[]}
                 onCancel={()=>setS3ed({ open:false, index:-1, item:null })} onSave={saveS3} />
+      <S4Editor open={s4ed.open} item={s4ed.item} index={s4ed.index} existingItems={current.s4?.items||[]}
+                onCancel={()=>setS4ed({ open:false, index:-1, item:null })} onSave={saveS4} />
       <S6Editor open={s6ed.open} item={s6ed.item} index={s6ed.index} existingItems={current.s6?.items||[]}
                 onCancel={()=>setS6ed({ open:false, index:-1, item:null })} onSave={saveS6} />
       <RecorderModal open={recEdit} recorder={current.recorder}
