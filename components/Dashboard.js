@@ -269,6 +269,8 @@ export default function Dashboard({ records, onBack, onEdit }){
         <Kpi n={d.staleBuckets.d15} t="ค้าง 15–30 วัน" cls={d.staleBuckets.d15?"amber":""} />
         <Kpi n={d.staleBuckets.d30} t="ค้าง > 30 วัน" cls={d.staleBuckets.d30?"warn":""} />
         <Kpi n={d.rejected.length} t="ถูกตีกลับ (rejected)" cls={d.rejected.length?"warn":""} />
+        <Kpi n={d.overdue} t="เลยกำหนดส่ง (overdue)" sub="ยังไม่สมบูรณ์" cls={d.overdue?"warn":""} />
+        <Kpi n={d.dueSoon} t="ใกล้ครบกำหนด ≤7วัน" cls={d.dueSoon?"amber":""} />
         <Kpi n={d.updatedToday} t="เคลื่อนไหววันนี้" cls="green" />
         <Kpi n={d.updated7d} t="เคลื่อนไหว 7 วัน" />
       </div>
