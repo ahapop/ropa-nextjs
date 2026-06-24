@@ -154,11 +154,9 @@ tbody tr:hover{background:#fafcff}
   background:radial-gradient(1200px 600px at 50% -10%,#16213f 0%,#0a0f1c 55%,#070b14 100%)}
 .login-card{width:100%;max-width:440px;background:#0f1626;border:1px solid #1f2b45;border-radius:18px;
   padding:30px;box-shadow:0 24px 70px rgba(0,0,0,.55)}
-.login-logo{background:#070b16;border:1px solid #1b2540;border-radius:14px;padding:22px 18px 18px;
-  text-align:center;margin-bottom:26px}
-.login-logo img{height:120px;width:auto;object-fit:contain;display:inline-block}
-.login-logo .sys{margin-top:12px;color:#e9eefc;font-size:22px;font-weight:800;letter-spacing:.5px}
-.login-logo .sub{color:#7f8db0;font-size:12.5px;margin-top:2px;letter-spacing:.4px}
+.login-logo{background:#fff;border:1px solid #1b2540;border-radius:14px;margin-bottom:26px;
+  overflow:hidden;display:flex;align-items:center;justify-content:center;min-height:210px;padding:14px}
+.login-logo img{max-width:100%;max-height:200px;width:auto;height:auto;object-fit:contain;display:block}
 .login-field{margin-bottom:18px}
 .login-field label{display:block;color:#cdd6ee;font-size:13.5px;font-weight:700;margin-bottom:8px}
 .login-input{position:relative}
@@ -175,10 +173,14 @@ tbody tr:hover{background:#fafcff}
 .login-foot{text-align:center;margin-top:16px;color:#8492b5;font-size:13px}
 .login-foot a{color:#5b8bff;font-weight:700;cursor:pointer;text-decoration:none}
 .login-foot a:hover{text-decoration:underline}
-.login-roles{margin-top:18px;border-top:1px solid #1f2b45;padding-top:16px}
-.login-roles .rl-lbl{color:#7f8db0;font-size:12px;margin-bottom:8px;text-align:center}
-.login-roles .rl-seg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.login-roles .rl-opt{display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 8px;border-radius:9px;
-  border:1px solid #2a3450;background:#141d30;color:#aab6d6;font-size:12.5px;font-weight:600;cursor:pointer;transition:.15s}
-.login-roles .rl-opt:hover{border-color:#3b6ef5}
-.login-roles .rl-opt.active{background:rgba(59,110,245,.16);border-color:#3b6ef5;color:#dfe8ff}
+
+/* ===== Logged-in user chip (header) ===== */
+.user-chip{display:flex;align-items:center;gap:11px}
+.user-chip .uc-text{text-align:right;line-height:1.25}
+.user-chip .uc-name{color:#fff;font-weight:700;font-size:13.5px;display:flex;align-items:center;justify-content:flex-end;gap:5px}
+.user-chip .uc-title{color:#d7e6ff;opacity:.8;font-size:11px}
+.user-chip .uc-avatar{width:40px;height:40px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;
+  font-weight:800;font-size:14px;color:#fff;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.28)}
+.user-chip .uc-badge{font-size:10px;font-weight:700;background:rgba(255,255,255,.22);color:#fff;border-radius:5px;padding:1px 6px}
+.user-chip .uc-logout{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.28)}
+.user-chip .uc-logout:hover{background:rgba(255,255,255,.22)}

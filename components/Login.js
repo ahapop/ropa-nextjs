@@ -4,14 +4,16 @@ import { useToast } from "./toast";
 
 export default function Login({ onChoose }){
   const toast = useToast();
-  const [email, setEmail] = useState("Chaloemkwanl@bts.co.th");
+  const email = "Chaloemkwanl@bts.co.th";
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
-  const [role, setRole] = useState("user");
 
   const signIn = () => {
-    if(!email.trim() || !password.trim()){ toast("กรุณากรอกอีเมลและรหัสผ่าน","err"); return; }
-    onChoose(role);
+    const pw = password.trim();
+    if(!pw){ toast("กรุณากรอกรหัสผ่าน","err"); return; }
+    if(pw === "123"){ onChoose("user"); return; }
+    if(pw === "999"){ onChoose("admin"); return; }
+    toast("รหัสผ่านไม่ถูกต้อง","err");
   };
 
   return (
@@ -19,15 +21,12 @@ export default function Login({ onChoose }){
       <div className="login-card">
         <div className="login-logo">
           <img src="/btsc-logo.png" alt="BTSC" />
-          <div className="sys">BTSC</div>
-          <div className="sub">RoPA · ระบบบันทึกกิจกรรมการประมวลผลข้อมูลส่วนบุคคล</div>
         </div>
 
         <div className="login-field">
           <label>Email</label>
           <div className="login-input">
-            <input type="email" value={email} placeholder="you@bts.co.th"
-                   onChange={e=>setEmail(e.target.value)}
+            <input type="email" value={email} readOnly
                    onKeyDown={e=>{ if(e.key==='Enter') signIn(); }} />
           </div>
         </div>
@@ -48,14 +47,6 @@ export default function Login({ onChoose }){
         <div className="login-foot">
           Don&apos;t have an account?{" "}
           <a onClick={()=>toast("ระบบสาธิต — ใช้บัญชีที่มีอยู่เพื่อเข้าใช้งาน","")}>Sign up</a>
-        </div>
-
-        <div className="login-roles">
-          <div className="rl-lbl">เข้าใช้งานเป็น</div>
-          <div className="rl-seg">
-            <div className={"rl-opt"+(role==="user"?" active":"")} onClick={()=>setRole("user")}>👤 ผู้ใช้ทั่วไป</div>
-            <div className={"rl-opt"+(role==="admin"?" active":"")} onClick={()=>setRole("admin")}>🛡️ ผู้ตรวจเอกสาร (Admin)</div>
-          </div>
         </div>
       </div>
     </div>

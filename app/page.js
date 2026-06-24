@@ -128,7 +128,7 @@ function App(){
 
   const confirmExit = () => { if(confirm("ออกจากแบบฟอร์ม? ข้อมูลที่ยังไม่กด Save จะไม่ถูกบันทึก")){ setCurrent(null); setView("list"); } };
 
-  const sessionLabel = isAdmin ? '🛡️ ผู้ตรวจเอกสาร (Admin)' : '👤 ผู้ใช้ทั่วไป';
+  const USER = { name: "Chaloemkwan loetpawnsutthi", title: "Data protection analyst supervisor", initials: "CL" };
 
   return (
     <>
@@ -139,15 +139,17 @@ function App(){
             <div className="sub">Record of Processing Activities — ตาม พ.ร.บ.คุ้มครองข้อมูลส่วนบุคคล (PDPA) · เวอร์ชัน 32</div>
           </div>
           <div style={{ display:"flex", alignItems:"center", gap:14 }}>
+            {view==='form' && <button className="btn btn-ghost btn-sm" onClick={confirmExit}>✕ กลับสู่รายการ</button>}
             {role && (
-              <div style={{ fontSize:12.5, color:"#eaf1ff", textAlign:"right" }}>
-                บทบาท: <b>{sessionLabel}</b>&nbsp;
-                <button className="btn btn-ghost btn-sm" style={{ padding:"2px 8px", fontSize:11 }} onClick={logout}>ออกจากระบบ</button>
+              <div className="user-chip">
+                <div className="uc-text">
+                  <div className="uc-name">{USER.name}{isAdmin && <span className="uc-badge">Admin</span>}</div>
+                  <div className="uc-title">{USER.title}</div>
+                </div>
+                <div className="uc-avatar">{USER.initials}</div>
+                <button className="btn btn-sm uc-logout" onClick={logout}>ออกจากระบบ</button>
               </div>
             )}
-            <div>
-              {view==='form' && <button className="btn btn-ghost btn-sm" onClick={confirmExit}>✕ กลับสู่รายการ</button>}
-            </div>
           </div>
         </header>
       )}
