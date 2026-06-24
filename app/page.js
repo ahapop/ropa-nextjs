@@ -123,7 +123,7 @@ function App(){
         <header className="top">
           <div>
             <h1>📋 ระบบบันทึกกิจกรรมการประมวลผลข้อมูลส่วนบุคคล (RoPA)</h1>
-            <div className="sub">Record of Processing Activities — ตาม พ.ร.บ.คุ้มครองข้อมูลส่วนบุคคล (PDPA) · เวอร์ชัน 32</div>
+            <div className="sub">Record of Processing Activities — ตาม พ.ร.บ.คุ้มครองข้อมูลส่วนบุคคล (PDPA)</div>
           </div>
           <div style={{ display:"flex", alignItems:"center", gap:14 }}>
             {view==='form' && <button className="btn btn-ghost btn-sm" onClick={confirmExit}>✕ กลับสู่รายการ</button>}
