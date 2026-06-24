@@ -20,8 +20,9 @@ export default function Login({ onChoose }){
     <div className="login-screen">
       <div className="login-card">
         <div className="login-logo">
-          <img src="/btsc-logo.png" alt="BTSC" />
+          <img src="/btsc-logo-transparent.png" alt="BTSC" />
         </div>
+        <div className="login-sys">ระบบบันทึกกิจกรรมการประมวลผลข้อมูลส่วนบุคคล (RoPA)</div>
 
         <div className="login-field">
           <label>Email</label>

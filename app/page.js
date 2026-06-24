@@ -7,8 +7,7 @@ import Dashboard from "@/components/Dashboard";
 import Wizard from "@/components/Wizard";
 import RecorderModal from "@/components/RecorderModal";
 import DataMapModal from "@/components/DataMapModal";
-import { ExcelModal, PinModal } from "@/components/MiscModals";
-import { PIN_KEY } from "@/lib/master";
+import { ExcelModal } from "@/components/MiscModals";
 import { loadRecords, persistRecords, blankRecord, clone, uid, nowStr, recName, migrateS3, migrateS4, migrateS6 } from "@/lib/util";
 import { buildXML, parseXML } from "@/lib/xmlio";
 
@@ -17,14 +16,12 @@ function App(){
   const [mounted, setMounted] = useState(false);
   const [records, setRecords] = useState([]);
   const [role, setRole] = useState(null);          // 'user' | 'admin'
-  const [adminUnlocked, setAdminUnlocked] = useState(false);
   const [view, setView] = useState("login");        // login | list | form | dashboard
   const [current, setCurrent] = useState(null);
 
   // app-level modals
   const [newRec, setNewRec] = useState({ open:false, base:null });
   const [excel, setExcel] = useState(false);
-  const [pin, setPin] = useState(false);
   const [listMap, setListMap] = useState({ open:false, rec:null });
 
   useEffect(() => { setRecords(loadRecords()); setMounted(true); }, []);
@@ -38,8 +35,8 @@ function App(){
   };
 
   // ---- navigation / auth ----
-  const chooseRole = (r) => { setRole(r); if(r==='admin') setAdminUnlocked(true); setView("list"); };
-  const logout = () => { if(!confirm('ออกจากระบบ?')) return; setRole(null); setAdminUnlocked(false); setCurrent(null); setView("login"); };
+  const chooseRole = (r) => { setRole(r); setView("list"); };
+  const logout = () => { if(!confirm('ออกจากระบบ?')) return; setRole(null); setCurrent(null); setView("login"); };
   const isAdmin = role==='admin';
 
   // ---- record CRUD ----
@@ -113,18 +110,8 @@ function App(){
     reader.readAsText(file, 'UTF-8');
   };
 
-  // ---- dashboard / pin ----
-  const openDashboard = () => { if(adminUnlocked){ setView("dashboard"); } else setPin(true); };
-  const onPinUnlock = () => { setAdminUnlocked(true); setPin(false); setView("dashboard"); };
-  const lockDashboard = () => { setAdminUnlocked(false); setView("list"); toast('ออกจากโหมด Admin แล้ว','ok'); };
-  const changePin = () => {
-    const cur = localStorage.getItem(PIN_KEY)||'';
-    const old = prompt('กรอก PIN ปัจจุบันเพื่อยืนยัน'); if(old===null) return;
-    if(old!==cur){ toast('PIN ปัจจุบันไม่ถูกต้อง','err'); return; }
-    const np = prompt('ตั้ง PIN ใหม่ (ตัวเลข 4–6 หลัก)'); if(np===null) return;
-    if(!/^\d{4,6}$/.test(np.trim())){ toast('PIN ต้องเป็นตัวเลข 4–6 หลัก','err'); return; }
-    localStorage.setItem(PIN_KEY, np.trim()); toast('เปลี่ยน PIN เรียบร้อย','ok');
-  };
+  // ---- dashboard (เฉพาะ Admin · ไม่มี PIN) ----
+  const openDashboard = () => { if(isAdmin) setView("dashboard"); };
 
   const confirmExit = () => { if(confirm("ออกจากแบบฟอร์ม? ข้อมูลที่ยังไม่กด Save จะไม่ถูกบันทึก")){ setCurrent(null); setView("list"); } };
 
@@ -160,14 +147,14 @@ function App(){
         <Login onChoose={chooseRole} />
       ) : view==='list' ? (
         <RecordList
-          records={records}
+          records={records} isAdmin={isAdmin}
           onNew={newRecord} onEdit={editRecord} onDuplicate={duplicateRecord} onDelete={deleteRecord}
           onOpenDataMap={(rec)=>setListMap({ open:true, rec })}
           onSaveXML={saveXML} onImportXML={importXML} onExportJSON={exportJSON}
           onOpenDashboard={openDashboard} onSeed={seed} onClearAll={clearAll} onOpenExcel={()=>setExcel(true)}
         />
       ) : view==='dashboard' ? (
-        <Dashboard records={records} onBack={()=>setView("list")} onChangePin={changePin} onLock={lockDashboard} onEdit={editRecord} />
+        <Dashboard records={records} onBack={()=>setView("list")} onEdit={editRecord} />
       ) : view==='form' && current ? (
         <Wizard current={current} setCurrent={setCurrent} isAdmin={isAdmin}
                 onExit={()=>setView("list")} onUpsert={upsert} onFinish={finishRecord} />
@@ -176,7 +163,6 @@ function App(){
       <RecorderModal open={newRec.open} recorder={newRec.base?.recorder}
                      onCancel={()=>setNewRec({ open:false, base:null })} onSave={onNewRecorder} />
       <ExcelModal open={excel} records={records} onCancel={()=>setExcel(false)} />
-      <PinModal open={pin} onCancel={()=>setPin(false)} onUnlock={onPinUnlock} />
       <DataMapModal open={listMap.open} rec={listMap.rec} onClose={()=>setListMap({ open:false, rec:null })} />
     </>
   );

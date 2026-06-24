@@ -20,7 +20,7 @@ function Kpi({ n, t, sub, cls }){
   return <div className={"kpi " + (cls||"")}><div className="n">{n}</div><div className="t">{t}</div>{sub && <div className="sub2">{sub}</div>}</div>;
 }
 
-export default function Dashboard({ records, onBack, onChangePin, onLock, onEdit }){
+export default function Dashboard({ records, onBack, onEdit }){
   const [comp, setComp] = useState("");
   const d = useMemo(() => {
     const R = records.filter(r => !comp || r.company===comp);
@@ -62,8 +62,6 @@ export default function Dashboard({ records, onBack, onChangePin, onLock, onEdit
             <option value="">ทุกบริษัท</option>
             {MASTER.companies.map(c=><option key={c} value={c}>{c}</option>)}
           </select>
-          <button className="btn btn-ghost btn-sm" onClick={onChangePin}>🔑 เปลี่ยน PIN</button>
-          <button className="btn btn-ghost btn-sm" onClick={onLock}>🔒 ออก/ล็อก</button>
           <button className="btn btn-primary btn-sm" onClick={onBack}>← กลับสู่รายการ</button>
         </div>
       </div>
