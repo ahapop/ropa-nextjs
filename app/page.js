@@ -181,7 +181,7 @@ function App(){
           <div>
             <h1>📋 ระบบบันทึกกิจกรรมการประมวลผลข้อมูลส่วนบุคคล (RoPA)</h1>
             <div className="sub">Record of Processing Activities — ตาม พ.ร.บ.คุ้มครองข้อมูลส่วนบุคคล (PDPA)</div>
-            <div className="hdr-note">จัดทำขึ้นเพื่อวัตถุประสงค์ในการทำทดสอบเท่านั้น · จัดทำโดย เฉลิมขวัญ กุลพงษ์ (Chaloemkwan loetpawnsutthi), Data protection analyst supervisor</div>
+            <div className="hdr-note">จัดทำขึ้นเพื่อวัตถุประสงค์ในการทำทดสอบเท่านั้น · จัดทำโดย เฉลิมขวัญ กุลพงษ์, Data protection analyst supervisor</div>
           </div>
           <div style={{ display:"flex", alignItems:"center", gap:14 }}>
             {view==='form' && <button className="btn btn-ghost btn-sm" onClick={confirmExit}>✕ กลับสู่รายการ</button>}

@@ -148,14 +148,15 @@ export default function RecordList(props){
     ? { tableLayout, width: colW.reduce((a,w)=>a+(w||0),0) + 'px' }
     : { tableLayout, width: '100%' };
 
-  const renderRow = (r, n) => {
+  const renderRow = (r, n, indent=0) => {
     const act = r.s1?.activity==="อื่นๆ" ? (r.s1?.activityOther||"อื่นๆ") : (r.s1?.activity||"—");
     const rejected = r.status==='rejected';
     const done = !!r.complete;
     return (
       <tr key={r.id}>
         <td>{n}</td>
-        <td title={act}><b>{act}</b></td>
+        <td title={act} style={indent ? { paddingLeft: indent } : undefined}>
+          {indent ? <span style={{ opacity:.45, marginRight:5 }}>📄</span> : null}<b>{act}</b></td>
         <td title={r.s1?.org||""}>{r.s1?.org||"—"}</td>
         <td>{r.company||"—"}</td>
         <td title={recName(r)||""}>{recName(r)||"—"}</td>
@@ -252,7 +253,7 @@ export default function RecordList(props){
                                           🗂️ {pt.dept} <span className="muted" style={{ fontWeight:400 }}>({pt.items.length})</span>
                                         </td>
                                       </tr>
-                                      {!pCol && pt.items.map((r,i)=>renderRow(r, i+1))}
+                                      {!pCol && pt.items.map((r,i)=>renderRow(r, i+1, 90))}
                                     </Fragment>
                                   );
                                 })}
