@@ -164,6 +164,12 @@ function App(){
                      onCancel={()=>setNewRec({ open:false, base:null })} onSave={onNewRecorder} />
       <ExcelModal open={excel} records={records} onCancel={()=>setExcel(false)} />
       <DataMapModal open={listMap.open} rec={listMap.rec} onClose={()=>setListMap({ open:false, rec:null })} />
+
+      {mounted && view!=='login' && (
+        <footer className="app-foot">
+          จัดทำขึ้นเพื่อวัตถุประสงค์ในการทำทดสอบเท่านั้น · จัดทำโดย Chaloemkwan loetpawnsutthi, Data protection analyst supervisor
+        </footer>
+      )}
     </>
   );
 }

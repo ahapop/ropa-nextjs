@@ -164,6 +164,9 @@ tbody tr.group-sub td{padding:7px 14px;color:var(--primary);font-size:12.5px;bor
 /* overlay (modals) */
 .overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:18px}
 
+/* footer ระบุวัตถุประสงค์การทดสอบ */
+.app-foot{text-align:center;color:var(--muted);font-size:12px;line-height:1.5;padding:16px 14px 28px;margin-top:8px;border-top:1px solid var(--line)}
+
 /* ===== Login screen (dark) ===== */
 .login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;
   background:radial-gradient(1200px 600px at 50% -10%,#16213f 0%,#0a0f1c 55%,#070b14 100%)}
