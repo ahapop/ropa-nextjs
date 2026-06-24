@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/authz";
 import { bulkInsertRecords, clearRecords } from "@/lib/db";
+import { scopeOf } from "@/lib/access";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,11 +19,11 @@ export async function POST(req){
   } catch(e){ return err(e); }
 }
 
-// clear — admin ล้างทั้งหมด, user ล้างของตัวเอง
+// clear — admin=ทั้งหมด, ฝ่าย=ทั้งฝ่าย, อื่น ๆ=ของตัวเอง
 export async function DELETE(){
   try {
     const u = await requireUser();
-    await clearRecords({ all: u.role === "admin", userId: u.id });
+    await clearRecords(scopeOf(u));
     return NextResponse.json({ ok: true });
   } catch(e){ return err(e); }
 }
