@@ -262,7 +262,7 @@ export default function Wizard({ current, setCurrent, isAdmin, onExit, onUpsert,
   const isLast = stepIdx===STEPS.length-1;
 
   return (
-    <div className="container">
+    <div className="container-fluid">
       <div className="wizard">
         <aside className="steps">
           <div className="recorder">
