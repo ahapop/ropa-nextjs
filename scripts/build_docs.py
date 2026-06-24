@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """แปลง Markdown (subset) -> .docx ฟอนต์ไทย  ·  python build_docs.py <in.md> <out.docx> "<title>" "<subtitle>" """
-import sys, re, datetime
+import sys, re, datetime, os
 from docx import Document
 from docx.shared import Pt, RGBColor, Inches
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -11,6 +11,8 @@ FONT = "TH Sarabun New"
 BODY = 15
 H = {1: 22, 2: 18, 3: 16, 4: 15}
 NAVY = RGBColor(0x16, 0x44, 0x7F)
+MUTED = RGBColor(0x6b, 0x77, 0x85)
+LOGO = "public/btsc-logo-transparent.png"
 
 def set_cs(rpr, name):
     rf = rpr.find(qn('w:rFonts'))
@@ -27,6 +29,36 @@ def style_font(style, name, size, bold=False, color=None):
 def runset(run, name=FONT):
     run.font.name = name
     set_cs(run._element.get_or_add_rPr(), name)
+
+def _field(p, instr, placeholder="", size=None, color=None):
+    """แทรก Word field (PAGE / NUMPAGES / TOC) ลงใน paragraph"""
+    r = p.add_run(); rel = r._r
+    b = OxmlElement('w:fldChar'); b.set(qn('w:fldCharType'), 'begin'); rel.append(b)
+    it = OxmlElement('w:instrText'); it.set(qn('xml:space'), 'preserve'); it.text = instr; rel.append(it)
+    sep = OxmlElement('w:fldChar'); sep.set(qn('w:fldCharType'), 'separate'); rel.append(sep)
+    if placeholder:
+        t = OxmlElement('w:t'); t.text = placeholder; rel.append(t)
+    e = OxmlElement('w:fldChar'); e.set(qn('w:fldCharType'), 'end'); rel.append(e)
+    runset(r)
+    if size: r.font.size = Pt(size)
+    if color is not None: r.font.color.rgb = color
+    return r
+
+def add_toc(doc):
+    p = doc.add_paragraph()
+    _field(p, 'TOC \\o "1-3" \\h \\z \\u',
+           placeholder="(สารบัญจะสร้างอัตโนมัติเมื่อเปิดไฟล์ · หากไม่ขึ้น คลิกขวาที่นี่ > Update Field)")
+
+def add_footer(doc):
+    fp = doc.sections[0].footer.paragraphs[0]; fp.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    r0 = fp.add_run("หน้า "); runset(r0); r0.font.size = Pt(12); r0.font.color.rgb = MUTED
+    _field(fp, "PAGE", "1", size=12, color=MUTED)
+    r1 = fp.add_run(" / "); runset(r1); r1.font.size = Pt(12); r1.font.color.rgb = MUTED
+    _field(fp, "NUMPAGES", "1", size=12, color=MUTED)
+
+def set_update_fields(doc):
+    el = doc.settings.element
+    uf = OxmlElement('w:updateFields'); uf.set(qn('w:val'), 'true'); el.append(uf)
 
 def emphasize(p, text):
     """แตก **bold** และ `code` เป็น runs"""
@@ -73,7 +105,13 @@ def build(md, out, title, subtitle):
         try: style_font(doc.styles[s], FONT, BODY)
         except KeyError: pass
 
-    # ปก
+    set_update_fields(doc)   # ให้ Word เสนออัปเดต field (สารบัญ/เลขหน้า) ตอนเปิด
+    add_footer(doc)          # เลขหน้าใน footer
+
+    # ปก — โลโก้
+    if os.path.exists(LOGO):
+        lp = doc.add_paragraph(); lp.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        lp.add_run().add_picture(LOGO, width=Inches(1.7))
     tp = doc.add_paragraph(); tp.alignment = WD_ALIGN_PARAGRAPH.CENTER
     r = tp.add_run(title); r.bold = True; r.font.size = Pt(26); r.font.color.rgb = NAVY; runset(r)
     if subtitle:
@@ -104,6 +142,8 @@ def build(md, out, title, subtitle):
             continue
         if s == '[[PAGEBREAK]]':
             doc.add_page_break(); i += 1; continue
+        if s == '[[TOC]]':
+            add_toc(doc); i += 1; continue
         m = re.match(r'!\[(.*?)\]\((.*?)\)', s)
         if m:
             cap, path = m.group(1), m.group(2)
