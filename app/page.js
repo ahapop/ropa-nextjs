@@ -76,7 +76,7 @@ function App(){
 
   // ---- from wizard ----
   const upsert = (rec) => { const r2 = { ...rec, updatedTs:Date.now() }; commit(mergeUpsert(records, r2)); setCurrent(r2); };
-  const finishRecord = (rec) => { const r2 = { ...rec, updatedTs:Date.now() }; commit(mergeUpsert(records, r2)); setCurrent(null); setTimeout(()=>setView("list"), 600); };
+  const finishRecord = (rec) => { const r2 = { ...rec, updatedTs:Date.now() }; commit(mergeUpsert(records, r2)); setCurrent(r2); setTimeout(()=>{ setView("list"); setCurrent(null); }, 600); };
 
   // ---- import / export ----
   const exportJSON = () => {
