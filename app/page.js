@@ -10,6 +10,7 @@ import RecorderModal from "@/components/RecorderModal";
 import DataMapModal from "@/components/DataMapModal";
 import { ExcelModal } from "@/components/MiscModals";
 import { blankRecord, clone, uid, nowStr, recName, migrateS3, migrateS4, migrateS6 } from "@/lib/util";
+import { recordComplete } from "@/lib/validate";
 import { buildXML, parseXML } from "@/lib/xmlio";
 import { api, initials } from "@/lib/api-client";
 
@@ -22,10 +23,15 @@ function App(){
   const [current, setCurrent] = useState(null);
 
   const [newRec, setNewRec] = useState({ open:false, base:null });
-  const [excel, setExcel] = useState(false);
+  const [excel, setExcel] = useState({ open:false, data:[] });
+  const [dashRecords, setDashRecords] = useState([]);
   const [listMap, setListMap] = useState({ open:false, rec:null });
 
   const isAdmin = user?.role === "admin";
+  // สร้าง summary (ข้อมูลย่อ) จาก record เต็ม สำหรับเก็บใน list state
+  const summarize = (r) => ({ id:r.id, company:r.company, status:r.status, complete: recordComplete(r),
+    updatedTs:r.updatedTs, updatedAt:r.updatedAt,
+    s1:{ org:r.s1?.org, activity:r.s1?.activity, activityOther:r.s1?.activityOther }, recorder:r.recorder||{} });
 
   useEffect(() => {
     (async () => {
@@ -57,15 +63,17 @@ function App(){
   // ---- record CRUD (ผ่าน API) ----
   const newRecord = () => { setNewRec({ open:true, base:blankRecord() }); };
   const onNewRecorder = (recorder) => { setCurrent({ ...newRec.base, recorder }); setNewRec({ open:false, base:null }); setView("form"); };
-  const editRecord = (id) => {
-    const found = records.find(r => r.id===id); if(!found) return;
-    setCurrent(migrateS6(migrateS4(migrateS3(clone(found))))); setView("form");
+  const editRecord = async (id) => {
+    try { const full = await api.getRecord(id); setCurrent(migrateS6(migrateS4(migrateS3(clone(full))))); setView("form"); }
+    catch(e){ toast(e.message,"err"); }
   };
   const duplicateRecord = async (id) => {
-    const src = records.find(r=>r.id===id); if(!src) return;
-    const copy = clone(src); copy.id=uid(); copy.status='draft'; copy.updatedAt=nowStr(); copy.updatedTs=Date.now();
-    try { await api.saveRecord(copy); setRecords([copy, ...records]); toast("ทำสำเนารายการแล้ว","ok"); }
-    catch(e){ toast(e.message,"err"); }
+    try {
+      const full = await api.getRecord(id);
+      const copy = clone(full); copy.id=uid(); copy.status='draft'; copy.updatedAt=nowStr(); copy.updatedTs=Date.now();
+      await api.saveRecord(copy);
+      setRecords([summarize(copy), ...records]); toast("ทำสำเนารายการแล้ว","ok");
+    } catch(e){ toast(e.message,"err"); }
   };
   const deleteRecord = async (id) => {
     if(!confirm("ยืนยันการลบรายการนี้?")) return;
@@ -102,24 +110,28 @@ function App(){
   // ---- from wizard ----
   const upsert = async (rec) => {
     const r2 = { ...rec, updatedTs:Date.now() };
-    setRecords(prev => mergeUpsert(prev, r2)); setCurrent(r2);
+    setRecords(prev => mergeUpsert(prev, summarize(r2))); setCurrent(r2);
     try { await api.saveRecord(r2); } catch(e){ toast(e.message,"err"); }
   };
   const finishRecord = async (rec) => {
     const r2 = { ...rec, updatedTs:Date.now() };
-    setRecords(prev => mergeUpsert(prev, r2)); setCurrent(r2);
+    setRecords(prev => mergeUpsert(prev, summarize(r2))); setCurrent(r2);
     try { await api.saveRecord(r2); } catch(e){ toast(e.message,"err"); }
     setTimeout(()=>{ setView("list"); setCurrent(null); }, 600);
   };
 
-  // ---- import / export ----
-  const exportJSON = () => {
-    const blob = new Blob([JSON.stringify(records,null,2)], { type:'application/json' });
-    const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='ropa-records.json'; a.click();
+  // ---- import / export (ดึงข้อมูลเต็มก่อน) ----
+  const exportJSON = async () => {
+    try {
+      const full = await api.listRecordsFull();
+      const blob = new Blob([JSON.stringify(full,null,2)], { type:'application/json' });
+      const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='ropa-records.json'; a.click();
+    } catch(e){ toast(e.message,"err"); }
   };
   const saveXML = async () => {
     if(records.length===0){ toast("ยังไม่มีข้อมูลให้บันทึก","err"); return; }
-    const xml = buildXML(records); const blob = new Blob([xml], { type:'application/xml' });
+    let full; try { full = await api.listRecordsFull(); } catch(e){ toast(e.message,"err"); return; }
+    const xml = buildXML(full); const blob = new Blob([xml], { type:'application/xml' });
     if(window.showSaveFilePicker){
       try{
         const h = await window.showSaveFilePicker({ suggestedName:'ropa-records.xml', types:[{ description:'XML File', accept:{ 'application/xml':['.xml'] } }] });
@@ -146,7 +158,19 @@ function App(){
     reader.readAsText(file, 'UTF-8');
   };
 
-  const openDashboard = () => { if(isAdmin) setView("dashboard"); };
+  const openDashboard = async () => {
+    if(!isAdmin) return;
+    try { setDashRecords(await api.listRecordsFull()); setView("dashboard"); }
+    catch(e){ toast(e.message,"err"); }
+  };
+  const openExcel = async () => {
+    try { setExcel({ open:true, data: await api.listRecordsFull() }); }
+    catch(e){ toast(e.message,"err"); }
+  };
+  const openDataMap = async (rec) => {
+    try { setListMap({ open:true, rec: await api.getRecord(rec.id) }); }
+    catch(e){ toast(e.message,"err"); }
+  };
   const openUsers = () => { if(isAdmin) setView("users"); };
   const confirmExit = () => { if(confirm("ออกจากแบบฟอร์ม? ข้อมูลที่ยังไม่กด Save จะไม่ถูกบันทึก")){ setCurrent(null); setView("list"); } };
 
@@ -181,12 +205,12 @@ function App(){
         <RecordList
           records={records} isAdmin={isAdmin}
           onNew={newRecord} onEdit={editRecord} onDuplicate={duplicateRecord} onDelete={deleteRecord}
-          onOpenDataMap={(rec)=>setListMap({ open:true, rec })}
+          onOpenDataMap={openDataMap}
           onSaveXML={saveXML} onImportXML={importXML} onExportJSON={exportJSON}
-          onOpenDashboard={openDashboard} onOpenUsers={openUsers} onSeed={seed} onSeedByOrg={seedByOrg} onClearAll={clearAll} onOpenExcel={()=>setExcel(true)}
+          onOpenDashboard={openDashboard} onOpenUsers={openUsers} onSeed={seed} onSeedByOrg={seedByOrg} onClearAll={clearAll} onOpenExcel={openExcel}
         />
       ) : view==='dashboard' ? (
-        <Dashboard records={records} onBack={()=>setView("list")} onEdit={editRecord} />
+        <Dashboard records={dashRecords} onBack={()=>setView("list")} onEdit={editRecord} />
       ) : view==='users' ? (
         <UserManagement currentUser={user} onBack={()=>setView("list")} />
       ) : view==='form' && current ? (
@@ -196,7 +220,7 @@ function App(){
 
       <RecorderModal open={newRec.open} recorder={newRec.base?.recorder}
                      onCancel={()=>setNewRec({ open:false, base:null })} onSave={onNewRecorder} />
-      <ExcelModal open={excel} records={records} onCancel={()=>setExcel(false)} />
+      <ExcelModal open={excel.open} records={excel.data} onCancel={()=>setExcel({ open:false, data:[] })} />
       <DataMapModal open={listMap.open} rec={listMap.rec} onClose={()=>setListMap({ open:false, rec:null })} />
     </>
   );

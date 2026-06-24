@@ -1,17 +1,21 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/authz";
-import { listRecords, getRecordOwner, upsertRecord } from "@/lib/db";
+import { listSummaries, listRecordsFull, getRecordOwner, upsertRecord } from "@/lib/db";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 function err(e){ return NextResponse.json({ error: e.message }, { status: e.status || 500 }); }
 
-// list — admin เห็นทุกคน, user เห็นของตัวเอง
-export async function GET(){
+// list — admin เห็นทุกคน, user เห็นของตัวเอง · default = ข้อมูลย่อ, ?full=1 = ข้อมูลเต็ม
+export async function GET(req){
   try {
     const u = await requireUser();
-    const records = await listRecords({ all: u.role === "admin", userId: u.id });
+    const all = u.role === "admin";
+    const full = new URL(req.url).searchParams.get("full");
+    const records = full
+      ? await listRecordsFull({ all, userId: u.id })
+      : await listSummaries({ all, userId: u.id });
     return NextResponse.json({ records });
   } catch(e){ return err(e); }
 }

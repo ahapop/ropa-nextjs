@@ -1,7 +1,6 @@
 "use client";
 import { useState, useRef, useMemo, useEffect, Fragment } from "react";
 import { recName, actDisplay } from "@/lib/util";
-import { recordComplete } from "@/lib/validate";
 import { MASTER, DIVISION_SECTIONS } from "@/lib/master";
 
 const PAGE_SIZE = 50;
@@ -143,7 +142,7 @@ export default function RecordList(props){
   const renderRow = (r, n) => {
     const act = r.s1?.activity==="อื่นๆ" ? (r.s1?.activityOther||"อื่นๆ") : (r.s1?.activity||"—");
     const rejected = r.status==='rejected';
-    const done = recordComplete(r);
+    const done = !!r.complete;
     return (
       <tr key={r.id}>
         <td>{n}</td>
