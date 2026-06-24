@@ -87,6 +87,17 @@ function App(){
       toast('เพิ่มข้อมูลตัวอย่าง '+n+' รายการแล้ว ✓','ok');
     } catch(e){ toast(e.message,"err"); }
   };
+  const seedByOrg = async () => {
+    if(records.length && !confirm('สร้างข้อมูลตัวอย่าง 20 รายการต่อ ฝ่าย/ส่วน (~2,400 รายการ) เป็นของบัญชีคุณ?\n(อาจใช้เวลาสักครู่)')) return;
+    try {
+      const { makeDummyByOrg } = await import("@/lib/dummy");
+      const all = makeDummyByOrg(20);
+      const CH = 200;
+      for(let i=0;i<all.length;i+=CH){ await api.bulkRecords(all.slice(i, i+CH)); }
+      await reload();
+      toast('เพิ่มข้อมูลตัวอย่าง '+all.length+' รายการแล้ว ✓','ok');
+    } catch(e){ toast(e.message,"err"); }
+  };
 
   // ---- from wizard ----
   const upsert = async (rec) => {
@@ -172,7 +183,7 @@ function App(){
           onNew={newRecord} onEdit={editRecord} onDuplicate={duplicateRecord} onDelete={deleteRecord}
           onOpenDataMap={(rec)=>setListMap({ open:true, rec })}
           onSaveXML={saveXML} onImportXML={importXML} onExportJSON={exportJSON}
-          onOpenDashboard={openDashboard} onOpenUsers={openUsers} onSeed={seed} onClearAll={clearAll} onOpenExcel={()=>setExcel(true)}
+          onOpenDashboard={openDashboard} onOpenUsers={openUsers} onSeed={seed} onSeedByOrg={seedByOrg} onClearAll={clearAll} onOpenExcel={()=>setExcel(true)}
         />
       ) : view==='dashboard' ? (
         <Dashboard records={records} onBack={()=>setView("list")} onEdit={editRecord} />
