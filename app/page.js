@@ -1,0 +1,187 @@
+"use client";
+import { useState, useEffect } from "react";
+import { ToastProvider, useToast } from "@/components/toast";
+import Login from "@/components/Login";
+import RecordList from "@/components/RecordList";
+import Dashboard from "@/components/Dashboard";
+import Wizard from "@/components/Wizard";
+import RecorderModal from "@/components/RecorderModal";
+import DataMapModal from "@/components/DataMapModal";
+import { ExcelModal, PinModal } from "@/components/MiscModals";
+import { PIN_KEY } from "@/lib/master";
+import { loadRecords, persistRecords, blankRecord, clone, uid, nowStr, recName, migrateS3, migrateS6 } from "@/lib/util";
+import { buildXML, parseXML } from "@/lib/xmlio";
+
+function App(){
+  const toast = useToast();
+  const [mounted, setMounted] = useState(false);
+  const [records, setRecords] = useState([]);
+  const [role, setRole] = useState(null);          // 'user' | 'admin'
+  const [adminUnlocked, setAdminUnlocked] = useState(false);
+  const [view, setView] = useState("login");        // login | list | form | dashboard
+  const [current, setCurrent] = useState(null);
+
+  // app-level modals
+  const [newRec, setNewRec] = useState({ open:false, base:null });
+  const [excel, setExcel] = useState(false);
+  const [pin, setPin] = useState(false);
+  const [listMap, setListMap] = useState({ open:false, rec:null });
+
+  useEffect(() => { setRecords(loadRecords()); setMounted(true); }, []);
+
+  const commit = (next) => { setRecords(next); persistRecords(next); };
+  const mergeUpsert = (list, rec) => {
+    const copy = clone(rec);
+    const i = list.findIndex(r => r.id===rec.id);
+    if(i>=0){ const n=list.slice(); n[i]=copy; return n; }
+    return [copy, ...list];
+  };
+
+  // ---- navigation / auth ----
+  const chooseRole = (r) => { setRole(r); if(r==='admin') setAdminUnlocked(true); setView("list"); };
+  const logout = () => { if(!confirm('ออกจากระบบ?')) return; setRole(null); setAdminUnlocked(false); setCurrent(null); setView("login"); };
+  const isAdmin = role==='admin';
+
+  // ---- record CRUD ----
+  const newRecord = () => { setNewRec({ open:true, base:blankRecord() }); };
+  const onNewRecorder = (recorder) => {
+    setCurrent({ ...newRec.base, recorder });
+    setNewRec({ open:false, base:null });
+    setView("form");
+  };
+  const editRecord = (id) => {
+    const found = records.find(r => r.id===id); if(!found) return;
+    const rec = migrateS6(migrateS3(clone(found)));
+    setCurrent(rec); setView("form");
+  };
+  const duplicateRecord = (id) => {
+    const src = records.find(r=>r.id===id); if(!src) return;
+    const copy = clone(src); copy.id=uid(); copy.status='draft'; copy.updatedAt=nowStr(); copy.updatedTs=Date.now();
+    commit([copy, ...records]); toast("ทำสำเนารายการแล้ว","ok");
+  };
+  const deleteRecord = (id) => { if(!confirm("ยืนยันการลบรายการนี้?")) return; commit(records.filter(r=>r.id!==id)); toast("ลบรายการแล้ว","ok"); };
+  const clearAll = () => {
+    if(!records.length){ toast('ไม่มีรายการให้ลบ','err'); return; }
+    if(!confirm('ลบรายการทั้งหมด '+records.length+' รายการ? การลบนี้ย้อนกลับไม่ได้')) return;
+    commit([]); toast('ลบรายการทั้งหมดแล้ว','ok');
+  };
+  const seed = (n) => {
+    if(records.length && !confirm('เพิ่มข้อมูลตัวอย่าง '+n+' รายการเข้าไป?\n(ข้อมูลเดิม '+records.length+' รายการจะยังอยู่)')) return;
+    import("@/lib/dummy").then(({ makeDummyRecords }) => {
+      const dummies = makeDummyRecords(n);
+      commit([...dummies, ...records]);
+      toast('เพิ่มข้อมูลตัวอย่าง '+n+' รายการแล้ว ✓','ok');
+    });
+  };
+
+  // ---- from wizard ----
+  const upsert = (rec) => { const r2 = { ...rec, updatedTs:Date.now() }; commit(mergeUpsert(records, r2)); setCurrent(r2); };
+  const finishRecord = (rec) => { const r2 = { ...rec, updatedTs:Date.now() }; commit(mergeUpsert(records, r2)); setCurrent(null); setTimeout(()=>setView("list"), 600); };
+
+  // ---- import / export ----
+  const exportJSON = () => {
+    const blob = new Blob([JSON.stringify(records,null,2)], { type:'application/json' });
+    const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='ropa-records.json'; a.click();
+  };
+  const saveXML = async () => {
+    if(records.length===0){ toast("ยังไม่มีข้อมูลให้บันทึก","err"); return; }
+    const xml = buildXML(records);
+    const blob = new Blob([xml], { type:'application/xml' });
+    if(window.showSaveFilePicker){
+      try{
+        const h = await window.showSaveFilePicker({ suggestedName:'ropa-records.xml', types:[{ description:'XML File', accept:{ 'application/xml':['.xml'] } }] });
+        const w = await h.createWritable(); await w.write(blob); await w.close();
+        toast("บันทึกไฟล์ XML เรียบร้อย","ok"); return;
+      }catch(e){ if(e.name==='AbortError') return; }
+    }
+    const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='ropa-records.xml'; a.click(); URL.revokeObjectURL(a.href);
+    toast("ดาวน์โหลดไฟล์ XML แล้ว","ok");
+  };
+  const importXML = (file) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try{
+        const imported = parseXML(reader.result);
+        if(!imported.length){ toast("ไม่พบรายการในไฟล์ XML","err"); return; }
+        const mode = confirm(`พบ ${imported.length} รายการในไฟล์\n\nกด "ตกลง" = รวมกับข้อมูลเดิม (merge ตาม id)\nกด "ยกเลิก" = แทนที่ข้อมูลเดิมทั้งหมด`);
+        let next;
+        if(mode){ next = records.slice(); imported.forEach(r=>{ const i=next.findIndex(x=>x.id===r.id); if(i>=0) next[i]=r; else next.push(r); }); }
+        else next = imported;
+        commit(next); toast(`นำเข้า ${imported.length} รายการสำเร็จ`,"ok");
+      }catch(e){ console.error(e); toast("อ่านไฟล์ XML ไม่สำเร็จ: รูปแบบไม่ถูกต้อง","err"); }
+    };
+    reader.readAsText(file, 'UTF-8');
+  };
+
+  // ---- dashboard / pin ----
+  const openDashboard = () => { if(adminUnlocked){ setView("dashboard"); } else setPin(true); };
+  const onPinUnlock = () => { setAdminUnlocked(true); setPin(false); setView("dashboard"); };
+  const lockDashboard = () => { setAdminUnlocked(false); setView("list"); toast('ออกจากโหมด Admin แล้ว','ok'); };
+  const changePin = () => {
+    const cur = localStorage.getItem(PIN_KEY)||'';
+    const old = prompt('กรอก PIN ปัจจุบันเพื่อยืนยัน'); if(old===null) return;
+    if(old!==cur){ toast('PIN ปัจจุบันไม่ถูกต้อง','err'); return; }
+    const np = prompt('ตั้ง PIN ใหม่ (ตัวเลข 4–6 หลัก)'); if(np===null) return;
+    if(!/^\d{4,6}$/.test(np.trim())){ toast('PIN ต้องเป็นตัวเลข 4–6 หลัก','err'); return; }
+    localStorage.setItem(PIN_KEY, np.trim()); toast('เปลี่ยน PIN เรียบร้อย','ok');
+  };
+
+  const confirmExit = () => { if(confirm("ออกจากแบบฟอร์ม? ข้อมูลที่ยังไม่กด Save จะไม่ถูกบันทึก")){ setCurrent(null); setView("list"); } };
+
+  const sessionLabel = isAdmin ? '🛡️ ผู้ตรวจเอกสาร (Admin)' : '👤 ผู้ใช้ทั่วไป';
+
+  return (
+    <>
+      <header className="top">
+        <div>
+          <h1>📋 ระบบบันทึกกิจกรรมการประมวลผลข้อมูลส่วนบุคคล (RoPA)</h1>
+          <div className="sub">Record of Processing Activities — ตาม พ.ร.บ.คุ้มครองข้อมูลส่วนบุคคล (PDPA) · เวอร์ชัน 32</div>
+        </div>
+        <div style={{ display:"flex", alignItems:"center", gap:14 }}>
+          {role && (
+            <div style={{ fontSize:12.5, color:"#eaf1ff", textAlign:"right" }}>
+              บทบาท: <b>{sessionLabel}</b>&nbsp;
+              <button className="btn btn-ghost btn-sm" style={{ padding:"2px 8px", fontSize:11 }} onClick={logout}>ออกจากระบบ</button>
+            </div>
+          )}
+          <div>
+            {view==='form' && <button className="btn btn-ghost btn-sm" onClick={confirmExit}>✕ กลับสู่รายการ</button>}
+          </div>
+        </div>
+      </header>
+
+      {!mounted ? (
+        <div className="container"><div className="muted" style={{ padding:24 }}>กำลังโหลด…</div></div>
+      ) : view==='login' ? (
+        <Login onChoose={chooseRole} />
+      ) : view==='list' ? (
+        <RecordList
+          records={records}
+          onNew={newRecord} onEdit={editRecord} onDuplicate={duplicateRecord} onDelete={deleteRecord}
+          onOpenDataMap={(rec)=>setListMap({ open:true, rec })}
+          onSaveXML={saveXML} onImportXML={importXML} onExportJSON={exportJSON}
+          onOpenDashboard={openDashboard} onSeed={seed} onClearAll={clearAll} onOpenExcel={()=>setExcel(true)}
+        />
+      ) : view==='dashboard' ? (
+        <Dashboard records={records} onBack={()=>setView("list")} onChangePin={changePin} onLock={lockDashboard} onEdit={editRecord} />
+      ) : view==='form' && current ? (
+        <Wizard current={current} setCurrent={setCurrent} isAdmin={isAdmin}
+                onExit={()=>setView("list")} onUpsert={upsert} onFinish={finishRecord} />
+      ) : null}
+
+      <RecorderModal open={newRec.open} recorder={newRec.base?.recorder}
+                     onCancel={()=>setNewRec({ open:false, base:null })} onSave={onNewRecorder} />
+      <ExcelModal open={excel} records={records} onCancel={()=>setExcel(false)} />
+      <PinModal open={pin} onCancel={()=>setPin(false)} onUnlock={onPinUnlock} />
+      <DataMapModal open={listMap.open} rec={listMap.rec} onClose={()=>setListMap({ open:false, rec:null })} />
+    </>
+  );
+}
+
+export default function Page(){
+  return (
+    <ToastProvider>
+      <App />
+    </ToastProvider>
+  );
+}
