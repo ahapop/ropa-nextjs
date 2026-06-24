@@ -5,75 +5,101 @@ import Login from "@/components/Login";
 import RecordList from "@/components/RecordList";
 import Dashboard from "@/components/Dashboard";
 import Wizard from "@/components/Wizard";
+import UserManagement from "@/components/UserManagement";
 import RecorderModal from "@/components/RecorderModal";
 import DataMapModal from "@/components/DataMapModal";
 import { ExcelModal } from "@/components/MiscModals";
-import { loadRecords, persistRecords, blankRecord, clone, uid, nowStr, recName, migrateS3, migrateS4, migrateS6 } from "@/lib/util";
+import { blankRecord, clone, uid, nowStr, recName, migrateS3, migrateS4, migrateS6 } from "@/lib/util";
 import { buildXML, parseXML } from "@/lib/xmlio";
+import { api, initials } from "@/lib/api-client";
 
 function App(){
   const toast = useToast();
   const [mounted, setMounted] = useState(false);
+  const [user, setUser] = useState(null);            // authenticated user (or null)
   const [records, setRecords] = useState([]);
-  const [role, setRole] = useState(null);          // 'user' | 'admin'
-  const [view, setView] = useState("login");        // login | list | form | dashboard
+  const [view, setView] = useState("login");          // login | list | form | dashboard | users
   const [current, setCurrent] = useState(null);
 
-  // app-level modals
   const [newRec, setNewRec] = useState({ open:false, base:null });
   const [excel, setExcel] = useState(false);
   const [listMap, setListMap] = useState({ open:false, rec:null });
 
-  useEffect(() => { setRecords(loadRecords()); setMounted(true); }, []);
+  const isAdmin = user?.role === "admin";
 
-  const commit = (next) => { setRecords(next); persistRecords(next); };
-  const mergeUpsert = (list, rec) => {
-    const copy = clone(rec);
-    const i = list.findIndex(r => r.id===rec.id);
-    if(i>=0){ const n=list.slice(); n[i]=copy; return n; }
-    return [copy, ...list];
+  useEffect(() => {
+    (async () => {
+      try {
+        const u = await api.me();
+        if(u){ setUser(u); setRecords(await api.listRecords()); setView("list"); }
+      } catch {}
+      setMounted(true);
+    })();
+  }, []);
+
+  const reload = async () => { try { setRecords(await api.listRecords()); } catch(e){ toast(e.message, "err"); } };
+  const mergeUpsert = (list, rec) => { const copy = clone(rec); const i = list.findIndex(r => r.id===rec.id); if(i>=0){ const n=list.slice(); n[i]=copy; return n; } return [copy, ...list]; };
+
+  // ---- auth ----
+  const login = async (email, password) => {
+    try {
+      const u = await api.login(email, password);
+      setUser(u); setRecords(await api.listRecords()); setView("list");
+      return null;
+    } catch(e){ return e.message; }
+  };
+  const logout = async () => {
+    if(!confirm("ออกจากระบบ?")) return;
+    try { await api.logout(); } catch {}
+    setUser(null); setRecords([]); setCurrent(null); setView("login");
   };
 
-  // ---- navigation / auth ----
-  const chooseRole = (r) => { setRole(r); setView("list"); };
-  const logout = () => { if(!confirm('ออกจากระบบ?')) return; setRole(null); setCurrent(null); setView("login"); };
-  const isAdmin = role==='admin';
-
-  // ---- record CRUD ----
+  // ---- record CRUD (ผ่าน API) ----
   const newRecord = () => { setNewRec({ open:true, base:blankRecord() }); };
-  const onNewRecorder = (recorder) => {
-    setCurrent({ ...newRec.base, recorder });
-    setNewRec({ open:false, base:null });
-    setView("form");
-  };
+  const onNewRecorder = (recorder) => { setCurrent({ ...newRec.base, recorder }); setNewRec({ open:false, base:null }); setView("form"); };
   const editRecord = (id) => {
     const found = records.find(r => r.id===id); if(!found) return;
-    const rec = migrateS6(migrateS4(migrateS3(clone(found))));
-    setCurrent(rec); setView("form");
+    setCurrent(migrateS6(migrateS4(migrateS3(clone(found))))); setView("form");
   };
-  const duplicateRecord = (id) => {
+  const duplicateRecord = async (id) => {
     const src = records.find(r=>r.id===id); if(!src) return;
     const copy = clone(src); copy.id=uid(); copy.status='draft'; copy.updatedAt=nowStr(); copy.updatedTs=Date.now();
-    commit([copy, ...records]); toast("ทำสำเนารายการแล้ว","ok");
+    try { await api.saveRecord(copy); setRecords([copy, ...records]); toast("ทำสำเนารายการแล้ว","ok"); }
+    catch(e){ toast(e.message,"err"); }
   };
-  const deleteRecord = (id) => { if(!confirm("ยืนยันการลบรายการนี้?")) return; commit(records.filter(r=>r.id!==id)); toast("ลบรายการแล้ว","ok"); };
-  const clearAll = () => {
+  const deleteRecord = async (id) => {
+    if(!confirm("ยืนยันการลบรายการนี้?")) return;
+    try { await api.deleteRecord(id); setRecords(records.filter(r=>r.id!==id)); toast("ลบรายการแล้ว","ok"); }
+    catch(e){ toast(e.message,"err"); }
+  };
+  const clearAll = async () => {
     if(!records.length){ toast('ไม่มีรายการให้ลบ','err'); return; }
-    if(!confirm('ลบรายการทั้งหมด '+records.length+' รายการ? การลบนี้ย้อนกลับไม่ได้')) return;
-    commit([]); toast('ลบรายการทั้งหมดแล้ว','ok');
+    if(!confirm((isAdmin?'ลบรายการทั้งหมดของทุกคน ':'ลบรายการทั้งหมด ')+records.length+' รายการ? การลบนี้ย้อนกลับไม่ได้')) return;
+    try { await api.clearRecords(); setRecords([]); toast('ลบรายการทั้งหมดแล้ว','ok'); }
+    catch(e){ toast(e.message,"err"); }
   };
-  const seed = (n) => {
-    if(records.length && !confirm('เพิ่มข้อมูลตัวอย่าง '+n+' รายการเข้าไป?\n(ข้อมูลเดิม '+records.length+' รายการจะยังอยู่)')) return;
-    import("@/lib/dummy").then(({ makeDummyRecords }) => {
-      const dummies = makeDummyRecords(n);
-      commit([...dummies, ...records]);
+  const seed = async (n) => {
+    if(records.length && !confirm('เพิ่มข้อมูลตัวอย่าง '+n+' รายการเข้าไป?')) return;
+    try {
+      const { makeDummyRecords } = await import("@/lib/dummy");
+      await api.bulkRecords(makeDummyRecords(n));
+      await reload();
       toast('เพิ่มข้อมูลตัวอย่าง '+n+' รายการแล้ว ✓','ok');
-    });
+    } catch(e){ toast(e.message,"err"); }
   };
 
   // ---- from wizard ----
-  const upsert = (rec) => { const r2 = { ...rec, updatedTs:Date.now() }; commit(mergeUpsert(records, r2)); setCurrent(r2); };
-  const finishRecord = (rec) => { const r2 = { ...rec, updatedTs:Date.now() }; commit(mergeUpsert(records, r2)); setCurrent(r2); setTimeout(()=>{ setView("list"); setCurrent(null); }, 600); };
+  const upsert = async (rec) => {
+    const r2 = { ...rec, updatedTs:Date.now() };
+    setRecords(prev => mergeUpsert(prev, r2)); setCurrent(r2);
+    try { await api.saveRecord(r2); } catch(e){ toast(e.message,"err"); }
+  };
+  const finishRecord = async (rec) => {
+    const r2 = { ...rec, updatedTs:Date.now() };
+    setRecords(prev => mergeUpsert(prev, r2)); setCurrent(r2);
+    try { await api.saveRecord(r2); } catch(e){ toast(e.message,"err"); }
+    setTimeout(()=>{ setView("list"); setCurrent(null); }, 600);
+  };
 
   // ---- import / export ----
   const exportJSON = () => {
@@ -82,8 +108,7 @@ function App(){
   };
   const saveXML = async () => {
     if(records.length===0){ toast("ยังไม่มีข้อมูลให้บันทึก","err"); return; }
-    const xml = buildXML(records);
-    const blob = new Blob([xml], { type:'application/xml' });
+    const xml = buildXML(records); const blob = new Blob([xml], { type:'application/xml' });
     if(window.showSaveFilePicker){
       try{
         const h = await window.showSaveFilePicker({ suggestedName:'ropa-records.xml', types:[{ description:'XML File', accept:{ 'application/xml':['.xml'] } }] });
@@ -96,30 +121,27 @@ function App(){
   };
   const importXML = (file) => {
     const reader = new FileReader();
-    reader.onload = () => {
+    reader.onload = async () => {
       try{
         const imported = parseXML(reader.result);
         if(!imported.length){ toast("ไม่พบรายการในไฟล์ XML","err"); return; }
         const mode = confirm(`พบ ${imported.length} รายการในไฟล์\n\nกด "ตกลง" = รวมกับข้อมูลเดิม (merge ตาม id)\nกด "ยกเลิก" = แทนที่ข้อมูลเดิมทั้งหมด`);
-        let next;
-        if(mode){ next = records.slice(); imported.forEach(r=>{ const i=next.findIndex(x=>x.id===r.id); if(i>=0) next[i]=r; else next.push(r); }); }
-        else next = imported;
-        commit(next); toast(`นำเข้า ${imported.length} รายการสำเร็จ`,"ok");
-      }catch(e){ console.error(e); toast("อ่านไฟล์ XML ไม่สำเร็จ: รูปแบบไม่ถูกต้อง","err"); }
+        if(!mode) await api.clearRecords();
+        await api.bulkRecords(imported);
+        await reload();
+        toast(`นำเข้า ${imported.length} รายการสำเร็จ`,"ok");
+      }catch(e){ console.error(e); toast(e.message || "อ่านไฟล์ XML ไม่สำเร็จ","err"); }
     };
     reader.readAsText(file, 'UTF-8');
   };
 
-  // ---- dashboard (เฉพาะ Admin · ไม่มี PIN) ----
   const openDashboard = () => { if(isAdmin) setView("dashboard"); };
-
+  const openUsers = () => { if(isAdmin) setView("users"); };
   const confirmExit = () => { if(confirm("ออกจากแบบฟอร์ม? ข้อมูลที่ยังไม่กด Save จะไม่ถูกบันทึก")){ setCurrent(null); setView("list"); } };
-
-  const USER = { name: "Chaloemkwan loetpawnsutthi", title: "Data protection analyst supervisor", initials: "CL" };
 
   return (
     <>
-      {mounted && view!=='login' && (
+      {mounted && view!=='login' && user && (
         <header className="top">
           <div>
             <h1>📋 ระบบบันทึกกิจกรรมการประมวลผลข้อมูลส่วนบุคคล (RoPA)</h1>
@@ -128,34 +150,34 @@ function App(){
           </div>
           <div style={{ display:"flex", alignItems:"center", gap:14 }}>
             {view==='form' && <button className="btn btn-ghost btn-sm" onClick={confirmExit}>✕ กลับสู่รายการ</button>}
-            {role && (
-              <div className="user-chip">
-                <div className="uc-text">
-                  <div className="uc-name">{USER.name}{isAdmin && <span className="uc-badge">Admin</span>}</div>
-                  <div className="uc-title">{USER.title}</div>
-                </div>
-                <div className="uc-avatar">{USER.initials}</div>
-                <button className="btn btn-sm uc-logout" onClick={logout}>ออกจากระบบ</button>
+            <div className="user-chip">
+              <div className="uc-text">
+                <div className="uc-name">{user.name || user.email}{isAdmin && <span className="uc-badge">Admin</span>}</div>
+                <div className="uc-title">{user.title || user.email}</div>
               </div>
-            )}
+              <div className="uc-avatar">{initials(user.name || user.email)}</div>
+              <button className="btn btn-sm uc-logout" onClick={logout}>ออกจากระบบ</button>
+            </div>
           </div>
         </header>
       )}
 
       {!mounted ? (
         <div className="container"><div className="muted" style={{ padding:24 }}>กำลังโหลด…</div></div>
-      ) : view==='login' ? (
-        <Login onChoose={chooseRole} />
+      ) : !user || view==='login' ? (
+        <Login onLogin={login} />
       ) : view==='list' ? (
         <RecordList
           records={records} isAdmin={isAdmin}
           onNew={newRecord} onEdit={editRecord} onDuplicate={duplicateRecord} onDelete={deleteRecord}
           onOpenDataMap={(rec)=>setListMap({ open:true, rec })}
           onSaveXML={saveXML} onImportXML={importXML} onExportJSON={exportJSON}
-          onOpenDashboard={openDashboard} onSeed={seed} onClearAll={clearAll} onOpenExcel={()=>setExcel(true)}
+          onOpenDashboard={openDashboard} onOpenUsers={openUsers} onSeed={seed} onClearAll={clearAll} onOpenExcel={()=>setExcel(true)}
         />
       ) : view==='dashboard' ? (
         <Dashboard records={records} onBack={()=>setView("list")} onEdit={editRecord} />
+      ) : view==='users' ? (
+        <UserManagement currentUser={user} onBack={()=>setView("list")} />
       ) : view==='form' && current ? (
         <Wizard current={current} setCurrent={setCurrent} isAdmin={isAdmin}
                 onExit={()=>setView("list")} onUpsert={upsert} onFinish={finishRecord} />

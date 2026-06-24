@@ -2,18 +2,19 @@
 import { useState } from "react";
 import { useToast } from "./toast";
 
-export default function Login({ onChoose }){
+export default function Login({ onLogin }){
   const toast = useToast();
-  const email = "Chaloemkwanl@bts.co.th";
+  const [email, setEmail] = useState("Chaloemkwanl@bts.co.th");
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
+  const [busy, setBusy] = useState(false);
 
-  const signIn = () => {
-    const pw = password.trim();
-    if(!pw){ toast("กรุณากรอกรหัสผ่าน","err"); return; }
-    if(pw === "123"){ onChoose("user"); return; }
-    if(pw === "999"){ onChoose("admin"); return; }
-    toast("รหัสผ่านไม่ถูกต้อง","err");
+  const signIn = async () => {
+    if(!email.trim() || !password.trim()){ toast("กรุณากรอกอีเมลและรหัสผ่าน","err"); return; }
+    setBusy(true);
+    const err = await onLogin(email.trim(), password);
+    setBusy(false);
+    if(err) toast(err, "err");
   };
 
   return (
@@ -27,7 +28,8 @@ export default function Login({ onChoose }){
         <div className="login-field">
           <label>Email</label>
           <div className="login-input">
-            <input type="email" value={email} readOnly
+            <input type="email" value={email} placeholder="you@bts.co.th" autoComplete="username"
+                   onChange={e=>setEmail(e.target.value)}
                    onKeyDown={e=>{ if(e.key==='Enter') signIn(); }} />
           </div>
         </div>
@@ -35,7 +37,7 @@ export default function Login({ onChoose }){
         <div className="login-field">
           <label>Password</label>
           <div className="login-input">
-            <input type={showPass ? "text" : "password"} value={password} placeholder="••••••••"
+            <input type={showPass ? "text" : "password"} value={password} placeholder="••••••••" autoComplete="current-password"
                    onChange={e=>setPassword(e.target.value)}
                    onKeyDown={e=>{ if(e.key==='Enter') signIn(); }} />
             <button type="button" className="eye" title={showPass ? "ซ่อนรหัสผ่าน" : "แสดงรหัสผ่าน"}
@@ -43,11 +45,11 @@ export default function Login({ onChoose }){
           </div>
         </div>
 
-        <button className="login-btn" onClick={signIn}>Sign In</button>
+        <button className="login-btn" onClick={signIn} disabled={busy}>{busy ? "กำลังเข้าสู่ระบบ…" : "Sign In"}</button>
 
         <div className="login-foot">
           Don&apos;t have an account?{" "}
-          <a onClick={()=>toast("ระบบสาธิต — ใช้บัญชีที่มีอยู่เพื่อเข้าใช้งาน","")}>Sign up</a>
+          <a onClick={()=>toast("ติดต่อผู้ดูแลระบบ (Admin) เพื่อสร้างบัญชีผู้ใช้","")}>Sign up</a>
         </div>
       </div>
     </div>
