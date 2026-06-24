@@ -26,9 +26,9 @@ export async function POST(req){
     const rec = await req.json();
     if(!rec || !rec.id) return NextResponse.json({ error: "invalid record" }, { status: 400 });
     const info = await getRecordAccessInfo(rec.id);
-    if(info && !canAccess(u, info.ownerId, info.ownerDivision))
+    if(info && !canAccess(u, info))
       return NextResponse.json({ error: "ไม่มีสิทธิ์แก้ไขรายการนี้" }, { status: 403 });
-    await upsertRecord(rec, info ? info.ownerId : u.id);
+    await upsertRecord(rec, info ? info.id : u.id);
     return NextResponse.json({ ok: true, record: rec });
   } catch(e){ return err(e); }
 }

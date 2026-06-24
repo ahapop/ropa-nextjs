@@ -55,11 +55,14 @@ tbody tr.group-sub td{padding:7px 14px;color:var(--primary);font-size:12.5px;bor
 tbody tr.group-sub2{cursor:pointer;background:#fafcff}
 tbody tr.group-sub2:hover{background:#eef4fc}
 tbody tr.group-sub2 td{padding:6px 14px;color:var(--muted);font-size:12px;border-bottom:1px solid var(--line)}
+tbody tr.group-sub3{cursor:pointer;background:#fdfdff}
+tbody tr.group-sub3:hover{background:#f3f7fd}
+tbody tr.group-sub3 td{padding:5px 14px;color:var(--muted);font-size:11.5px;border-bottom:1px solid var(--line)}
 .pager{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;border-top:1px solid var(--line);flex-wrap:wrap}
 /* ตารางรายการ: auto-fit ตามข้อความ + ปรับความกว้างเองได้ + ตรึงหัวตาราง */
 .rec-table thead th{position:sticky;top:0;z-index:3;box-shadow:0 2px 0 var(--line)}
 .rec-table tbody td{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.rec-table tbody tr.group-head td,.rec-table tbody tr.group-sub td,.rec-table tbody tr.group-sub2 td{overflow:visible}
+.rec-table tbody tr.group-head td,.rec-table tbody tr.group-sub td,.rec-table tbody tr.group-sub2 td,.rec-table tbody tr.group-sub3 td{overflow:visible}
 .col-resizer{position:absolute;top:0;right:0;height:100%;width:8px;cursor:col-resize;user-select:none;touch-action:none}
 .col-resizer:hover{background:rgba(30,90,168,.35)}
 

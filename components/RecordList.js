@@ -56,7 +56,7 @@ export default function RecordList(props){
     const f = filter.trim().toLowerCase();
     let list = records.filter(r => {
       if(!f) return true;
-      const hay = [r.s1?.activity, r.s1?.activityOther, r.s1?.org, r.company, recName(r)].join(' ').toLowerCase();
+      const hay = [r.s1?.activity, r.s1?.activityOther, r.s1?.org, r.company, r.department, recName(r)].join(' ').toLowerCase();
       return hay.includes(f);
     });
     if(sortKey){
@@ -69,18 +69,21 @@ export default function RecordList(props){
     return list;
   }, [records, filter, sortKey, sortDir]);
 
-  // company -> ฝ่าย -> ส่วน -> records
+  // company -> ฝ่าย -> ส่วน -> แผนก -> records
   const nested = useMemo(() => {
     const cmap = new Map();
     for(const r of rows){
       const c = r.company || "";
       const [d, s] = orgLevels(r.s1?.org);
+      const p = (r.department || "").trim() || "— (ไม่มีแผนก)";
       if(!cmap.has(c)) cmap.set(c, new Map());
       const dmap = cmap.get(c);
       if(!dmap.has(d)) dmap.set(d, new Map());
       const smap = dmap.get(d);
-      if(!smap.has(s)) smap.set(s, []);
-      smap.get(s).push(r);
+      if(!smap.has(s)) smap.set(s, new Map());
+      const pmap = smap.get(s);
+      if(!pmap.has(p)) pmap.set(p, []);
+      pmap.get(p).push(r);
     }
     const cOrder = [...MASTER.companies, ...[...cmap.keys()].filter(c=>c&&!MASTER.companies.includes(c)).sort((a,b)=>a.localeCompare(b,'th')), ""];
     const seen = new Set();
@@ -89,7 +92,12 @@ export default function RecordList(props){
       const dmap = cmap.get(c); let count=0;
       const divs = keys(dmap).map(d=>{
         const smap = dmap.get(d); let dcount=0;
-        const secs = keys(smap).map(s=>{ const items=smap.get(s); dcount+=items.length; return { sec:s, items }; });
+        const secs = keys(smap).map(s=>{
+          const pmap = smap.get(s); let scount=0;
+          const depts = keys(pmap).map(p=>{ const items=pmap.get(p); scount+=items.length; return { dept:p, items }; });
+          dcount += scount;
+          return { sec:s, count:scount, depts };
+        });
         count += dcount;
         return { div:d, count:dcount, secs };
       });
@@ -109,11 +117,12 @@ export default function RecordList(props){
   const cK = c => c;
   const dK = (c,d) => c+SEP+d;
   const sK = (c,d,s) => c+SEP+d+SEP+s;
+  const pK = (c,d,s,p) => c+SEP+d+SEP+s+SEP+p;
   const toggleGroupBy = () => setGroupBy(v => {
     const next = !v;
     if(next){
       const set = new Set();
-      nested.forEach(g => { set.add(cK(g.company)); g.divs.forEach(dv => { set.add(dK(g.company,dv.div)); dv.secs.forEach(sc => set.add(sK(g.company,dv.div,sc.sec))); }); });
+      nested.forEach(g => { set.add(cK(g.company)); g.divs.forEach(dv => { set.add(dK(g.company,dv.div)); dv.secs.forEach(sc => { set.add(sK(g.company,dv.div,sc.sec)); sc.depts.forEach(pt => set.add(pK(g.company,dv.div,sc.sec,pt.dept))); }); }); });
       setCollapsed(set);
     }
     return next;
@@ -230,10 +239,23 @@ export default function RecordList(props){
                                 <tr className="group-sub2" onClick={()=>toggle(sK(g.company, dv.div, sc.sec))}>
                                   <td colSpan={COLS.length}>
                                     <span style={{ display:"inline-block", width:16, marginLeft:44 }}>{sCol ? "▸" : "▾"}</span>
-                                    📂 {sc.sec} <span className="muted" style={{ fontWeight:400 }}>({sc.items.length})</span>
+                                    📂 {sc.sec} <span className="muted" style={{ fontWeight:400 }}>({sc.count} รายการ · {sc.depts.length} แผนก)</span>
                                   </td>
                                 </tr>
-                                {!sCol && sc.items.map((r,i)=>renderRow(r, i+1))}
+                                {!sCol && sc.depts.map(pt => {
+                                  const pCol = collapsed.has(pK(g.company, dv.div, sc.sec, pt.dept));
+                                  return (
+                                    <Fragment key={pt.dept}>
+                                      <tr className="group-sub3" onClick={()=>toggle(pK(g.company, dv.div, sc.sec, pt.dept))}>
+                                        <td colSpan={COLS.length}>
+                                          <span style={{ display:"inline-block", width:16, marginLeft:66 }}>{pCol ? "▸" : "▾"}</span>
+                                          🗂️ {pt.dept} <span className="muted" style={{ fontWeight:400 }}>({pt.items.length})</span>
+                                        </td>
+                                      </tr>
+                                      {!pCol && pt.items.map((r,i)=>renderRow(r, i+1))}
+                                    </Fragment>
+                                  );
+                                })}
                               </Fragment>
                             );
                           })}

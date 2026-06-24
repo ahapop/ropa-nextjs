@@ -5,7 +5,7 @@ import { Modal, ModalHead, ModalFoot } from "./ui";
 import { DIVISIONS, sectionsFor, SECTIONS } from "@/lib/master";
 import { api } from "@/lib/api-client";
 
-const BLANK = { email:"", name:"", title:"", division:"", section:"", role:"user", password:"" };
+const BLANK = { email:"", name:"", title:"", division:"", section:"", department:"", role:"user", password:"" };
 
 function UserModal({ open, editing, onCancel, onSaved }){
   const toast = useToast();
@@ -21,8 +21,8 @@ function UserModal({ open, editing, onCancel, onSaved }){
     if(!editing && !f.password.trim()){ toast("กรุณาระบุรหัสผ่าน","err"); return; }
     setBusy(true);
     try {
-      if(editing) await api.updateUser(editing.id, { name:f.name, title:f.title, division:f.division, section:f.section, role:f.role, password: f.password.trim() || undefined });
-      else await api.createUser({ email:f.email.trim(), name:f.name, title:f.title, division:f.division, section:f.section, role:f.role, password:f.password });
+      if(editing) await api.updateUser(editing.id, { name:f.name, title:f.title, division:f.division, section:f.section, department:f.department, role:f.role, password: f.password.trim() || undefined });
+      else await api.createUser({ email:f.email.trim(), name:f.name, title:f.title, division:f.division, section:f.section, department:f.department, role:f.role, password:f.password });
       onSaved();
     } catch(e){ toast(e.message,"err"); }
     setBusy(false);
@@ -53,6 +53,8 @@ function UserModal({ open, editing, onCancel, onSaved }){
               <option value="">{f.division && sectionOptions.length===0 ? "— ฝ่ายนี้ไม่มีส่วนย่อย —" : "— เลือกส่วน —"}</option>
               {sectionOptions.map((o,i)=><option key={i} value={o}>{o}</option>)}
             </select></div>
+          <div className="field"><label>แผนก<div className="hint">ระดับล่างสุด · ถ้าระบุ จะเห็นเฉพาะข้อมูลของตัวเอง</div></label>
+            <input type="text" value={f.department} placeholder="เช่น แผนกงาน 1" onChange={e=>upd('department', e.target.value)} /></div>
         </div>
         <div className="field"><label>รหัสผ่าน{!editing && <span className="req">*</span>}
           {editing && <span className="hint" style={{ display:"inline", marginLeft:6 }}>(เว้นว่างหากไม่เปลี่ยน)</span>}</label>
