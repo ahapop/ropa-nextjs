@@ -153,10 +153,10 @@ export default function RecordList(props){
     const rejected = r.status==='rejected';
     const done = !!r.complete;
     return (
-      <tr key={r.id}>
-        <td>{n}</td>
+      <tr key={r.id} className={indent ? "grec" : undefined}>
+        <td>{indent ? "" : n}</td>
         <td title={act} style={indent ? { paddingLeft: indent } : undefined}>
-          {indent ? <span style={{ opacity:.45, marginRight:5 }}>📄</span> : null}<b>{act}</b></td>
+          {indent ? <span style={{ opacity:.6, marginRight:5 }}>📄 {n}.</span> : null}<b>{act}</b></td>
         <td title={r.s1?.org||""}>{r.s1?.org||"—"}</td>
         <td>{r.company||"—"}</td>
         <td title={recName(r)||""}>{recName(r)||"—"}</td>
