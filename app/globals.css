@@ -42,6 +42,9 @@ tbody tr:hover{background:#fafcff}
 .badge.rejected{background:#fde2e2;color:#b3261e}
 .empty{padding:48px;text-align:center;color:var(--muted)}
 .row-actions{display:flex;gap:6px;white-space:nowrap}
+tbody tr.group-head{cursor:pointer;background:#eef3fb}
+tbody tr.group-head:hover{background:#e2ebf8}
+tbody tr.group-head td{padding:9px 14px;color:var(--primary-dark);font-size:13px;border-bottom:2px solid var(--line);border-top:1px solid var(--line)}
 
 /* ===== Wizard ===== */
 .wizard{display:grid;grid-template-columns:260px minmax(0,1fr);gap:20px;align-items:start}

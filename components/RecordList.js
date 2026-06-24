@@ -2,6 +2,7 @@
 import { useState, useRef, useMemo } from "react";
 import { recName, actDisplay } from "@/lib/util";
 import { recordComplete } from "@/lib/validate";
+import { MASTER } from "@/lib/master";
 
 const STATUS_RANK = { draft:0, rejected:1, done:2 };
 function sortVal(r, key){
@@ -22,6 +23,8 @@ export default function RecordList(props){
   const [filter, setFilter] = useState("");
   const [sortKey, setSortKey] = useState(null);
   const [sortDir, setSortDir] = useState(1);
+  const [groupByCompany, setGroupByCompany] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => new Set());
   const fileRef = useRef(null);
 
   const rows = useMemo(() => {
@@ -41,10 +44,44 @@ export default function RecordList(props){
     return list;
   }, [records, filter, sortKey, sortDir]);
 
+  // จัดกลุ่มตามบริษัท: เรียงตามลำดับ MASTER.companies ก่อน แล้วบริษัทอื่น ๆ แล้ว "ไม่ระบุ"
+  const groups = useMemo(() => {
+    const map = new Map();
+    rows.forEach(r => { const c = r.company || ""; if(!map.has(c)) map.set(c, []); map.get(c).push(r); });
+    const order = [...MASTER.companies, ...[...map.keys()].filter(c => c && !MASTER.companies.includes(c)).sort((a,b)=>a.localeCompare(b,'th')), ""];
+    const seen = new Set();
+    return order.filter(c => !seen.has(c) && (seen.add(c), map.has(c)))
+                .map(c => ({ company:c, label: c || "— ไม่ระบุบริษัท —", items: map.get(c) }));
+  }, [rows]);
+
   const sort = (key) => {
     if(sortKey===key) setSortDir(d=>d*-1); else { setSortKey(key); setSortDir(1); }
   };
   const arrow = (k) => sortKey===k ? (sortDir===1 ? '▲' : '▼') : '';
+  const toggleCollapse = (c) => setCollapsed(prev => { const n = new Set(prev); n.has(c) ? n.delete(c) : n.add(c); return n; });
+
+  const renderRow = (r, n) => {
+    const act = r.s1?.activity==="อื่นๆ" ? (r.s1?.activityOther||"อื่นๆ") : (r.s1?.activity||"—");
+    const rejected = r.status==='rejected';
+    const done = recordComplete(r);
+    return (
+      <tr key={r.id}>
+        <td>{n}</td>
+        <td><b>{act}</b></td>
+        <td>{r.s1?.org||"—"}</td>
+        <td>{r.company||"—"}</td>
+        <td>{recName(r)||"—"}</td>
+        <td style={{ fontSize:12, color:"var(--muted)" }}>{r.updatedAt||"—"}</td>
+        <td><span className={"badge " + (rejected?'rejected':(done?'done':'draft'))}>{rejected?'ตีกลับ':(done?'สมบูรณ์':'ร่าง')}</span></td>
+        <td><div className="row-actions">
+          <button className="btn btn-ghost btn-sm" onClick={()=>onEdit(r.id)}>✎ แก้ไข</button>
+          <button className="btn btn-ghost btn-sm" title="Data Mapping Diagram" onClick={()=>onOpenDataMap(r)}>🗺️</button>
+          <button className="btn btn-ghost btn-sm" onClick={()=>onDuplicate(r.id)}>⧉</button>
+          <button className="btn btn-danger btn-sm" onClick={()=>onDelete(r.id)}>🗑</button>
+        </div></td>
+      </tr>
+    );
+  };
 
   return (
     <div className="container">
@@ -54,6 +91,10 @@ export default function RecordList(props){
           <input type="text" value={filter} onChange={e=>setFilter(e.target.value)} placeholder="ค้นหา: กิจกรรม / ฝ่าย / ผู้บันทึก ..." />
         </div>
         <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
+          <button className={"btn btn-sm " + (groupByCompany ? "btn-primary" : "btn-ghost")}
+                  onClick={()=>setGroupByCompany(v=>!v)} title="สลับการแสดงผลแบบแบ่งกลุ่มตามบริษัท">
+            📑 จัดกลุ่มบริษัท {groupByCompany ? "✓" : ""}
+          </button>
           <button className="btn btn-ghost btn-sm" onClick={onSaveXML}>💾 Save XML (ไฟล์)</button>
           <button className="btn btn-ghost btn-sm" onClick={()=>fileRef.current?.click()}>📂 โหลด XML</button>
           <button className="btn btn-ghost btn-sm" onClick={onExportJSON}>⬇ JSON</button>
@@ -78,30 +119,24 @@ export default function RecordList(props){
             <th className="sortable" style={{ width:90 }} onClick={()=>sort('status')}>สถานะ <span className="sort-arrow">{arrow('status')}</span></th>
             <th style={{ width:170 }}>จัดการ</th>
           </tr></thead>
-          <tbody>
-            {rows.map((r,i)=>{
-              const act = r.s1?.activity==="อื่นๆ" ? (r.s1?.activityOther||"อื่นๆ") : (r.s1?.activity||"—");
-              const rejected = r.status==='rejected';
-              const done = recordComplete(r);
+          {groupByCompany ? (
+            groups.map(g => {
+              const isCollapsed = collapsed.has(g.company);
               return (
-                <tr key={r.id}>
-                  <td>{i+1}</td>
-                  <td><b>{act}</b></td>
-                  <td>{r.s1?.org||"—"}</td>
-                  <td>{r.company||"—"}</td>
-                  <td>{recName(r)||"—"}</td>
-                  <td style={{ fontSize:12, color:"var(--muted)" }}>{r.updatedAt||"—"}</td>
-                  <td><span className={"badge " + (rejected?'rejected':(done?'done':'draft'))}>{rejected?'ตีกลับ':(done?'สมบูรณ์':'ร่าง')}</span></td>
-                  <td><div className="row-actions">
-                    <button className="btn btn-ghost btn-sm" onClick={()=>onEdit(r.id)}>✎ แก้ไข</button>
-                    <button className="btn btn-ghost btn-sm" title="Data Mapping Diagram" onClick={()=>onOpenDataMap(r)}>🗺️</button>
-                    <button className="btn btn-ghost btn-sm" onClick={()=>onDuplicate(r.id)}>⧉</button>
-                    <button className="btn btn-danger btn-sm" onClick={()=>onDelete(r.id)}>🗑</button>
-                  </div></td>
-                </tr>
+                <tbody key={g.company || "__none"}>
+                  <tr className="group-head" onClick={()=>toggleCollapse(g.company)}>
+                    <td colSpan={8}>
+                      <span style={{ display:"inline-block", width:16 }}>{isCollapsed ? "▸" : "▾"}</span>
+                      🏢 <b>{g.label}</b> <span className="muted" style={{ fontWeight:400 }}>({g.items.length} รายการ)</span>
+                    </td>
+                  </tr>
+                  {!isCollapsed && g.items.map((r,i)=>renderRow(r, i+1))}
+                </tbody>
               );
-            })}
-          </tbody>
+            })
+          ) : (
+            <tbody>{rows.map((r,i)=>renderRow(r, i+1))}</tbody>
+          )}
         </table>
         {rows.length===0 && <div className="empty">ยังไม่มีรายการ — กดปุ่ม “เพิ่มรายการใหม่” เพื่อเริ่มบันทึก</div>}
       </div>
