@@ -1,20 +1,61 @@
 "use client";
+import { useState } from "react";
+import { useToast } from "./toast";
 
 export default function Login({ onChoose }){
+  const toast = useToast();
+  const [email, setEmail] = useState("Chaloemkwanl@bts.co.th");
+  const [password, setPassword] = useState("");
+  const [showPass, setShowPass] = useState(false);
+  const [role, setRole] = useState("user");
+
+  const signIn = () => {
+    if(!email.trim() || !password.trim()){ toast("กรุณากรอกอีเมลและรหัสผ่าน","err"); return; }
+    onChoose(role);
+  };
+
   return (
-    <div className="container">
-      <div style={{ maxWidth:560, margin:"8vh auto 0", background:"var(--card)", borderRadius:"var(--radius)", boxShadow:"var(--shadow)", overflow:"hidden" }}>
-        <div style={{ padding:"22px 26px", borderBottom:"1px solid var(--line)" }}>
-          <h2 style={{ margin:0, fontSize:18, color:"var(--primary-dark)" }}>เข้าสู่ระบบ</h2>
-          <p style={{ margin:"6px 0 0", fontSize:13, color:"var(--muted)" }}>เลือกบทบาทการใช้งาน (ตัวอย่างสาธิต — ไม่มีรหัสผ่าน)</p>
+    <div className="login-screen">
+      <div className="login-card">
+        <div className="login-logo">
+          <img src="/btsc-logo.png" alt="BTSC" />
+          <div className="sys">BTSC</div>
+          <div className="sub">RoPA · ระบบบันทึกกิจกรรมการประมวลผลข้อมูลส่วนบุคคล</div>
         </div>
-        <div style={{ padding:"24px 26px", display:"flex", flexDirection:"column", gap:14 }}>
-          <button className="btn btn-primary" style={{ padding:16, fontSize:15, justifyContent:"flex-start" }} onClick={()=>onChoose('user')}>
-            👤 เข้าใช้งานเป็น “ผู้ใช้ทั่วไป” <span style={{ fontWeight:400, opacity:.85, marginLeft:6 }}>— บันทึก/แก้ไขรายการ RoPA</span>
-          </button>
-          <button className="btn btn-accent" style={{ padding:16, fontSize:15, justifyContent:"flex-start" }} onClick={()=>onChoose('admin')}>
-            🛡️ เข้าใช้งานเป็น “ผู้ตรวจเอกสาร (Admin)” <span style={{ fontWeight:400, opacity:.85, marginLeft:6 }}>— ตรวจและตีกลับเอกสาร</span>
-          </button>
+
+        <div className="login-field">
+          <label>Email</label>
+          <div className="login-input">
+            <input type="email" value={email} placeholder="you@bts.co.th"
+                   onChange={e=>setEmail(e.target.value)}
+                   onKeyDown={e=>{ if(e.key==='Enter') signIn(); }} />
+          </div>
+        </div>
+
+        <div className="login-field">
+          <label>Password</label>
+          <div className="login-input">
+            <input type={showPass ? "text" : "password"} value={password} placeholder="••••••••"
+                   onChange={e=>setPassword(e.target.value)}
+                   onKeyDown={e=>{ if(e.key==='Enter') signIn(); }} />
+            <button type="button" className="eye" title={showPass ? "ซ่อนรหัสผ่าน" : "แสดงรหัสผ่าน"}
+                    onClick={()=>setShowPass(s=>!s)}>{showPass ? "🙈" : "👁"}</button>
+          </div>
+        </div>
+
+        <button className="login-btn" onClick={signIn}>Sign In</button>
+
+        <div className="login-foot">
+          Don&apos;t have an account?{" "}
+          <a onClick={()=>toast("ระบบสาธิต — ใช้บัญชีที่มีอยู่เพื่อเข้าใช้งาน","")}>Sign up</a>
+        </div>
+
+        <div className="login-roles">
+          <div className="rl-lbl">เข้าใช้งานเป็น</div>
+          <div className="rl-seg">
+            <div className={"rl-opt"+(role==="user"?" active":"")} onClick={()=>setRole("user")}>👤 ผู้ใช้ทั่วไป</div>
+            <div className={"rl-opt"+(role==="admin"?" active":"")} onClick={()=>setRole("admin")}>🛡️ ผู้ตรวจเอกสาร (Admin)</div>
+          </div>
         </div>
       </div>
     </div>

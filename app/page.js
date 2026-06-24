@@ -132,23 +132,25 @@ function App(){
 
   return (
     <>
-      <header className="top">
-        <div>
-          <h1>📋 ระบบบันทึกกิจกรรมการประมวลผลข้อมูลส่วนบุคคล (RoPA)</h1>
-          <div className="sub">Record of Processing Activities — ตาม พ.ร.บ.คุ้มครองข้อมูลส่วนบุคคล (PDPA) · เวอร์ชัน 32</div>
-        </div>
-        <div style={{ display:"flex", alignItems:"center", gap:14 }}>
-          {role && (
-            <div style={{ fontSize:12.5, color:"#eaf1ff", textAlign:"right" }}>
-              บทบาท: <b>{sessionLabel}</b>&nbsp;
-              <button className="btn btn-ghost btn-sm" style={{ padding:"2px 8px", fontSize:11 }} onClick={logout}>ออกจากระบบ</button>
-            </div>
-          )}
+      {mounted && view!=='login' && (
+        <header className="top">
           <div>
-            {view==='form' && <button className="btn btn-ghost btn-sm" onClick={confirmExit}>✕ กลับสู่รายการ</button>}
+            <h1>📋 ระบบบันทึกกิจกรรมการประมวลผลข้อมูลส่วนบุคคล (RoPA)</h1>
+            <div className="sub">Record of Processing Activities — ตาม พ.ร.บ.คุ้มครองข้อมูลส่วนบุคคล (PDPA) · เวอร์ชัน 32</div>
           </div>
-        </div>
-      </header>
+          <div style={{ display:"flex", alignItems:"center", gap:14 }}>
+            {role && (
+              <div style={{ fontSize:12.5, color:"#eaf1ff", textAlign:"right" }}>
+                บทบาท: <b>{sessionLabel}</b>&nbsp;
+                <button className="btn btn-ghost btn-sm" style={{ padding:"2px 8px", fontSize:11 }} onClick={logout}>ออกจากระบบ</button>
+              </div>
+            )}
+            <div>
+              {view==='form' && <button className="btn btn-ghost btn-sm" onClick={confirmExit}>✕ กลับสู่รายการ</button>}
+            </div>
+          </div>
+        </header>
+      )}
 
       {!mounted ? (
         <div className="container"><div className="muted" style={{ padding:24 }}>กำลังโหลด…</div></div>

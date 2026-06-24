@@ -148,3 +148,37 @@ tbody tr:hover{background:#fafcff}
 
 /* overlay (modals) */
 .overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:18px}
+
+/* ===== Login screen (dark) ===== */
+.login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;
+  background:radial-gradient(1200px 600px at 50% -10%,#16213f 0%,#0a0f1c 55%,#070b14 100%)}
+.login-card{width:100%;max-width:440px;background:#0f1626;border:1px solid #1f2b45;border-radius:18px;
+  padding:30px;box-shadow:0 24px 70px rgba(0,0,0,.55)}
+.login-logo{background:#070b16;border:1px solid #1b2540;border-radius:14px;padding:22px 18px 18px;
+  text-align:center;margin-bottom:26px}
+.login-logo img{height:120px;width:auto;object-fit:contain;display:inline-block}
+.login-logo .sys{margin-top:12px;color:#e9eefc;font-size:22px;font-weight:800;letter-spacing:.5px}
+.login-logo .sub{color:#7f8db0;font-size:12.5px;margin-top:2px;letter-spacing:.4px}
+.login-field{margin-bottom:18px}
+.login-field label{display:block;color:#cdd6ee;font-size:13.5px;font-weight:700;margin-bottom:8px}
+.login-input{position:relative}
+.login-input input{width:100%;padding:13px 14px;border:1px solid #2a3450;border-radius:10px;
+  background:#1b2438;color:#eaf0ff;font-family:inherit;font-size:14px}
+.login-input input::placeholder{color:#5d6a8a}
+.login-input input:focus{outline:none;border-color:#3b6ef5;box-shadow:0 0 0 3px rgba(59,110,245,.25)}
+.login-input .eye{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:0;
+  cursor:pointer;color:#8090b5;font-size:16px;padding:4px;line-height:1}
+.login-btn{width:100%;border:0;border-radius:10px;padding:13px;font-family:inherit;font-size:15px;font-weight:700;
+  color:#fff;cursor:pointer;background:linear-gradient(180deg,#3f74ff,#2f5fe6);transition:.15s;margin-top:4px}
+.login-btn:hover{filter:brightness(1.07)}
+.login-btn:active{transform:translateY(1px)}
+.login-foot{text-align:center;margin-top:16px;color:#8492b5;font-size:13px}
+.login-foot a{color:#5b8bff;font-weight:700;cursor:pointer;text-decoration:none}
+.login-foot a:hover{text-decoration:underline}
+.login-roles{margin-top:18px;border-top:1px solid #1f2b45;padding-top:16px}
+.login-roles .rl-lbl{color:#7f8db0;font-size:12px;margin-bottom:8px;text-align:center}
+.login-roles .rl-seg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.login-roles .rl-opt{display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 8px;border-radius:9px;
+  border:1px solid #2a3450;background:#141d30;color:#aab6d6;font-size:12.5px;font-weight:600;cursor:pointer;transition:.15s}
+.login-roles .rl-opt:hover{border-color:#3b6ef5}
+.login-roles .rl-opt.active{background:rgba(59,110,245,.16);border-color:#3b6ef5;color:#dfe8ff}
