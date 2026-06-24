@@ -23,7 +23,7 @@ if(existing){
   const passwordHash = await bcrypt.hash("123", 10);
   await createUser({
     id: crypto.randomUUID(), email,
-    name: "Chaloemkwan loetpawnsutthi", title: "Data protection analyst supervisor",
+    name: "Chaloemkwan Kulapong", title: "Data protection analyst supervisor",
     division: "", section: "", role: "admin", passwordHash,
   });
   console.log("seeded admin:", email);
