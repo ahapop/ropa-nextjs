@@ -41,7 +41,7 @@ function orgLevels(org){
 
 export default function RecordList(props){
   const { records, isAdmin, onNew, onEdit, onDuplicate, onDelete, onOpenDataMap,
-          onSaveXML, onImportXML, onExportJSON, onOpenDashboard, onOpenUsers, onSeed, onSeedByOrg, onClearAll, onOpenExcel } = props;
+          onSaveXML, onImportXML, onExportJSON, onOpenDashboard, onOpenUsers, onSeedByOrg, onClearAll, onOpenExcel } = props;
   const [filter, setFilter] = useState("");
   const [sortKey, setSortKey] = useState(null);
   const [sortDir, setSortDir] = useState(1);
@@ -192,7 +192,6 @@ export default function RecordList(props){
                   title={isAdmin ? "" : "เฉพาะผู้ตรวจเอกสาร (Admin) เท่านั้น"}>📊 Dashboard</button>
           {isAdmin && <button className="btn btn-ghost btn-sm" onClick={onOpenUsers} title="จัดการผู้ใช้ (เฉพาะ Admin)">👥 จัดการผู้ใช้</button>}
           <button className="btn btn-ghost btn-sm" onClick={onOpenExcel} title="ส่งออกเป็น Excel ตามรูปแบบ ROPA — เลือกบริษัท/ฝ่ายได้">⬇ Export Excel</button>
-          <button className="btn btn-ghost btn-sm" onClick={()=>onSeed(100)} title="สร้างข้อมูลตัวอย่าง 100 รายการ (org สุ่ม) ของบัญชีคุณ">🧪 ตัวอย่าง 100</button>
           <button className="btn btn-ghost btn-sm" onClick={onSeedByOrg} title="สร้างข้อมูลตัวอย่าง 20 รายการต่อ ฝ่าย/ส่วน (~2,400 รายการ) ของบัญชีคุณ">🧪 20/ฝ่าย-ส่วน</button>
           <button className="btn btn-ghost btn-sm" onClick={onClearAll} title="ลบรายการทั้งหมด">🗑 ล้างทั้งหมด</button>
           <button className="btn btn-primary" onClick={onNew}>＋ เพิ่มรายการใหม่</button>

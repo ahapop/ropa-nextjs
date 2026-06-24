@@ -86,15 +86,6 @@ function App(){
     try { await api.clearRecords(); setRecords([]); toast('ลบรายการทั้งหมดแล้ว','ok'); }
     catch(e){ toast(e.message,"err"); }
   };
-  const seed = async (n) => {
-    if(records.length && !confirm('เพิ่มข้อมูลตัวอย่าง '+n+' รายการเข้าไป?')) return;
-    try {
-      const { makeDummyRecords } = await import("@/lib/dummy");
-      await api.bulkRecords(makeDummyRecords(n));
-      await reload();
-      toast('เพิ่มข้อมูลตัวอย่าง '+n+' รายการแล้ว ✓','ok');
-    } catch(e){ toast(e.message,"err"); }
-  };
   const seedByOrg = async () => {
     if(records.length && !confirm('สร้างข้อมูลตัวอย่าง 20 รายการต่อ ฝ่าย/ส่วน (~2,400 รายการ) เป็นของบัญชีคุณ?\n(อาจใช้เวลาสักครู่)')) return;
     try {
@@ -207,7 +198,7 @@ function App(){
           onNew={newRecord} onEdit={editRecord} onDuplicate={duplicateRecord} onDelete={deleteRecord}
           onOpenDataMap={openDataMap}
           onSaveXML={saveXML} onImportXML={importXML} onExportJSON={exportJSON}
-          onOpenDashboard={openDashboard} onOpenUsers={openUsers} onSeed={seed} onSeedByOrg={seedByOrg} onClearAll={clearAll} onOpenExcel={openExcel}
+          onOpenDashboard={openDashboard} onOpenUsers={openUsers} onSeedByOrg={seedByOrg} onClearAll={clearAll} onOpenExcel={openExcel}
         />
       ) : view==='dashboard' ? (
         <Dashboard records={dashRecords} onBack={()=>setView("list")} onEdit={editRecord} />
