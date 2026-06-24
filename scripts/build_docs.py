@@ -2,7 +2,7 @@
 """แปลง Markdown (subset) -> .docx ฟอนต์ไทย  ·  python build_docs.py <in.md> <out.docx> "<title>" "<subtitle>" """
 import sys, re, datetime
 from docx import Document
-from docx.shared import Pt, RGBColor
+from docx.shared import Pt, RGBColor, Inches
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
@@ -102,6 +102,21 @@ def build(md, out, title, subtitle):
             p = doc.add_paragraph()
             r = p.add_run('\n'.join(code)); r.font.size = Pt(11); runset(r, 'Consolas')
             continue
+        if s == '[[PAGEBREAK]]':
+            doc.add_page_break(); i += 1; continue
+        m = re.match(r'!\[(.*?)\]\((.*?)\)', s)
+        if m:
+            cap, path = m.group(1), m.group(2)
+            try:
+                doc.add_picture(path, width=Inches(6.4))
+                doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
+                if cap:
+                    cp = doc.add_paragraph(); cp.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                    rr = cp.add_run("▲ " + cap); rr.italic = True; rr.font.size = Pt(12)
+                    rr.font.color.rgb = RGBColor(0x6b,0x77,0x85); runset(rr)
+            except Exception as ex:
+                doc.add_paragraph("[ไม่พบรูป: " + path + "]")
+            i += 1; continue
         m = re.match(r'(#{1,4})\s+(.*)', s)
         if m:
             lvl = len(m.group(1)); h = doc.add_heading(level=lvl)
