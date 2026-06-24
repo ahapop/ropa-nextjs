@@ -53,7 +53,7 @@ export default function Dashboard({ records, onBack, onEdit }){
   }, [records, comp]);
 
   return (
-    <div className="container">
+    <div className="container-fluid">
       <div className="dash-head">
         <h2>📊 Dashboard สำหรับ Admin</h2>
         <div className="filters">
