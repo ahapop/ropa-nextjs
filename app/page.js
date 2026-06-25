@@ -61,7 +61,13 @@ function App(){
   };
 
   // ---- record CRUD (ผ่าน API) ----
-  const newRecord = () => { setNewRec({ open:true, base:blankRecord() }); };
+  // เติมข้อมูลผู้บันทึกจากผู้ใช้ที่ Login อยู่ (แก้/ยืนยันต่อใน RecorderModal ได้)
+  const recorderFromUser = (u) => {
+    const parts = (u?.name || "").trim().split(/\s+/);
+    return { firstName: parts[0] || "", lastName: parts.slice(1).join(" "),
+             position: u?.title || "", phone: "", division: u?.division || "", section: u?.section || "" };
+  };
+  const newRecord = () => { setNewRec({ open:true, base:{ ...blankRecord(), recorder: recorderFromUser(user) } }); };
   const onNewRecorder = (recorder) => { setCurrent({ ...newRec.base, recorder }); setNewRec({ open:false, base:null }); setView("form"); };
   const editRecord = async (id) => {
     try { const full = await api.getRecord(id); setCurrent(migrateS6(migrateS4(migrateS3(clone(full))))); setView("form"); }
