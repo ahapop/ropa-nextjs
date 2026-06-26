@@ -45,7 +45,7 @@ export default function RecordList(props){
   const [filter, setFilter] = useState("");
   const [sortKey, setSortKey] = useState('updated');   // เริ่มต้นเรียงตาม "ปรับปรุงล่าสุด" เสมอ
   const [sortDir, setSortDir] = useState(-1);            // ใหม่สุดอยู่บน
-  const [groupBy, setGroupBy] = useState(false);
+  const [groupBy, setGroupBy] = useState(null);   // null | 'company' | 'division'
   const [collapsed, setCollapsed] = useState(() => new Set());
   const [colW, setColW] = useState(() => new Array(COLS.length).fill(null));
   const [page, setPage] = useState(0);
@@ -69,41 +69,18 @@ export default function RecordList(props){
     return list;
   }, [records, filter, sortKey, sortDir]);
 
-  // company -> ฝ่าย -> ส่วน -> แผนก -> records
-  const nested = useMemo(() => {
-    const cmap = new Map();
-    for(const r of rows){
-      const c = r.company || "";
-      const [d, s] = orgLevels(r.s1?.org);
-      const p = (r.department || "").trim() || "— (ไม่มีแผนก)";
-      if(!cmap.has(c)) cmap.set(c, new Map());
-      const dmap = cmap.get(c);
-      if(!dmap.has(d)) dmap.set(d, new Map());
-      const smap = dmap.get(d);
-      if(!smap.has(s)) smap.set(s, new Map());
-      const pmap = smap.get(s);
-      if(!pmap.has(p)) pmap.set(p, []);
-      pmap.get(p).push(r);
-    }
-    const cOrder = [...MASTER.companies, ...[...cmap.keys()].filter(c=>c&&!MASTER.companies.includes(c)).sort((a,b)=>a.localeCompare(b,'th')), ""];
-    const seen = new Set();
-    const keys = m => [...m.keys()].sort((a,b)=>a.localeCompare(b,'th'));
-    return cOrder.filter(c=>!seen.has(c)&&(seen.add(c),cmap.has(c))).map(c=>{
-      const dmap = cmap.get(c); let count=0;
-      const divs = keys(dmap).map(d=>{
-        const smap = dmap.get(d); let dcount=0;
-        const secs = keys(smap).map(s=>{
-          const pmap = smap.get(s); let scount=0;
-          const depts = keys(pmap).map(p=>{ const items=pmap.get(p); scount+=items.length; return { dept:p, items }; });
-          dcount += scount;
-          return { sec:s, count:scount, depts };
-        });
-        count += dcount;
-        return { div:d, count:dcount, secs };
-      });
-      return { company:c, label: c || "— ไม่ระบุบริษัท —", count, divs };
-    });
-  }, [rows]);
+  // จัดกลุ่มตามมิติเดียว (บริษัท หรือ ฝ่าย) → [{key,label,items}]
+  const groups = useMemo(() => {
+    if(!groupBy) return null;
+    const keyFn = groupBy==='company' ? (r=>r.company||"") : (r=>orgLevels(r.s1?.org)[0]);
+    const m = new Map();
+    for(const r of rows){ const k = keyFn(r); if(!m.has(k)) m.set(k, []); m.get(k).push(r); }
+    let keys = [...m.keys()];
+    if(groupBy==='company'){ const o = [...MASTER.companies];
+      keys.sort((a,b)=> ((o.indexOf(a)+1||99)-(o.indexOf(b)+1||99)) || a.localeCompare(b,'th')); }
+    else keys.sort((a,b)=>a.localeCompare(b,'th'));
+    return keys.map(k=>({ key:k, label:k||"— ไม่ระบุ —", items:m.get(k) }));
+  }, [rows, groupBy]);
 
   useEffect(() => { setPage(0); }, [filter, sortKey, sortDir, groupBy, records.length]);
   const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
@@ -114,19 +91,12 @@ export default function RecordList(props){
   const sort = (key) => { if(draggingRef.current) return; if(sortKey===key) setSortDir(d=>d*-1); else { setSortKey(key); setSortDir(1); } };
   const arrow = (k) => sortKey===k ? (sortDir===1 ? '▲' : '▼') : '';
   const toggle = (k) => setCollapsed(prev => { const n = new Set(prev); n.has(k) ? n.delete(k) : n.add(k); return n; });
-  const cK = c => c;
-  const dK = (c,d) => c+SEP+d;
-  const sK = (c,d,s) => c+SEP+d+SEP+s;
-  const pK = (c,d,s,p) => c+SEP+d+SEP+s+SEP+p;
-  const toggleGroupBy = () => setGroupBy(v => {
-    const next = !v;
-    if(next){
-      const set = new Set();
-      nested.forEach(g => { set.add(cK(g.company)); g.divs.forEach(dv => { set.add(dK(g.company,dv.div)); dv.secs.forEach(sc => { set.add(sK(g.company,dv.div,sc.sec)); sc.depts.forEach(pt => set.add(pK(g.company,dv.div,sc.sec,pt.dept))); }); }); });
-      setCollapsed(set);
-    }
-    return next;
-  });
+  const setGroup = (mode) => {
+    if(groupBy===mode){ setGroupBy(null); return; }
+    setGroupBy(mode);
+    const keyFn = mode==='company' ? (r=>r.company||"") : (r=>orgLevels(r.s1?.org)[0]);
+    setCollapsed(new Set(rows.map(keyFn)));   // เริ่มแบบยุบทุกกลุ่ม
+  };
 
   const startResize = (e, i) => {
     e.preventDefault(); e.stopPropagation();
@@ -180,10 +150,10 @@ export default function RecordList(props){
           <input type="text" value={filter} onChange={e=>setFilter(e.target.value)} placeholder="ค้นหา: กิจกรรม / ฝ่าย / ผู้บันทึก ..." />
         </div>
         <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
-          <button className={"btn btn-sm " + (groupBy ? "btn-primary" : "btn-ghost")}
-                  onClick={toggleGroupBy} title="จัดกลุ่ม บริษัท → ฝ่าย → ส่วน (เริ่มแบบยุบ)">
-            📑 จัดกลุ่ม {groupBy ? "✓" : ""}
-          </button>
+          <button className={"btn btn-sm " + (groupBy==='company' ? "btn-primary" : "btn-ghost")}
+                  onClick={()=>setGroup('company')} title="จัดกลุ่มตามบริษัท (เริ่มแบบยุบ)">🏢 ตามบริษัท</button>
+          <button className={"btn btn-sm " + (groupBy==='division' ? "btn-primary" : "btn-ghost")}
+                  onClick={()=>setGroup('division')} title="จัดกลุ่มตามฝ่าย (เริ่มแบบยุบ)">📁 ตามฝ่าย</button>
           {tableLayout==='fixed' && <button className="btn btn-ghost btn-sm" onClick={resetWidths} title="คืนความกว้างคอลัมน์อัตโนมัติ">↔ รีเซ็ตคอลัมน์</button>}
           <button className="btn btn-ghost btn-sm" onClick={onSaveXML}>💾 Save XML (ไฟล์)</button>
           <button className="btn btn-ghost btn-sm" onClick={()=>fileRef.current?.click()}>📂 โหลด XML</button>
@@ -212,59 +182,22 @@ export default function RecordList(props){
               ))}
             </tr></thead>
             {groupBy ? (
-              nested.map(g => {
-                const cCol = collapsed.has(cK(g.company));
-                return (
-                  <tbody key={g.company || "__none"}>
-                    <tr className="group-head" onClick={()=>toggle(cK(g.company))}>
-                      <td colSpan={COLS.length}>
-                        <span style={{ display:"inline-block", width:16 }}>{cCol ? "▸" : "▾"}</span>
-                        🏢 <b>{g.label}</b> <span className="muted" style={{ fontWeight:400 }}>({g.count} รายการ · {g.divs.length} ฝ่าย)</span>
-                      </td>
-                    </tr>
-                    {!cCol && g.divs.map(dv => {
-                      const dCol = collapsed.has(dK(g.company, dv.div));
-                      return (
-                        <Fragment key={dv.div}>
-                          <tr className="group-sub" onClick={()=>toggle(dK(g.company, dv.div))}>
-                            <td colSpan={COLS.length}>
-                              <span style={{ display:"inline-block", width:16, marginLeft:22 }}>{dCol ? "▸" : "▾"}</span>
-                              📁 {dv.div} <span className="muted" style={{ fontWeight:400 }}>({dv.count} รายการ · {dv.secs.length} ส่วน)</span>
-                            </td>
-                          </tr>
-                          {!dCol && dv.secs.map(sc => {
-                            const sCol = collapsed.has(sK(g.company, dv.div, sc.sec));
-                            return (
-                              <Fragment key={sc.sec}>
-                                <tr className="group-sub2" onClick={()=>toggle(sK(g.company, dv.div, sc.sec))}>
-                                  <td colSpan={COLS.length}>
-                                    <span style={{ display:"inline-block", width:16, marginLeft:44 }}>{sCol ? "▸" : "▾"}</span>
-                                    📂 {sc.sec} <span className="muted" style={{ fontWeight:400 }}>({sc.count} รายการ · {sc.depts.length} แผนก)</span>
-                                  </td>
-                                </tr>
-                                {!sCol && sc.depts.map(pt => {
-                                  const pCol = collapsed.has(pK(g.company, dv.div, sc.sec, pt.dept));
-                                  return (
-                                    <Fragment key={pt.dept}>
-                                      <tr className="group-sub3" onClick={()=>toggle(pK(g.company, dv.div, sc.sec, pt.dept))}>
-                                        <td colSpan={COLS.length}>
-                                          <span style={{ display:"inline-block", width:16, marginLeft:66 }}>{pCol ? "▸" : "▾"}</span>
-                                          🗂️ {pt.dept} <span className="muted" style={{ fontWeight:400 }}>({pt.items.length})</span>
-                                        </td>
-                                      </tr>
-                                      {!pCol && pt.items.map((r,i)=>renderRow(r, i+1, 90))}
-                                    </Fragment>
-                                  );
-                                })}
-                              </Fragment>
-                            );
-                          })}
-                        </Fragment>
-                      );
-                    })}
-                  </tbody>
-                );
-              })
+              <tbody>
+                {groups.map(g => {
+                  const col = collapsed.has(g.key);
+                  return (
+                    <Fragment key={g.key || "__none"}>
+                      <tr className="group-head" onClick={()=>toggle(g.key)}>
+                        <td colSpan={COLS.length}>
+                          <span style={{ display:"inline-block", width:16 }}>{col ? "▸" : "▾"}</span>
+                          {groupBy==='company' ? "🏢" : "📁"} <b>{g.label}</b> <span className="muted" style={{ fontWeight:400 }}>({g.items.length} รายการ)</span>
+                        </td>
+                      </tr>
+                      {!col && g.items.map((r,i)=>renderRow(r, i+1, 24))}
+                    </Fragment>
+                  );
+                })}
+              </tbody>
             ) : (
               <tbody>{pageRows.map((r,i)=>renderRow(r, safePage*PAGE_SIZE + i + 1))}</tbody>
             )}
