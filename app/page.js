@@ -25,7 +25,6 @@ function App(){
 
   const [newRec, setNewRec] = useState({ open:false, base:null });
   const [excel, setExcel] = useState({ open:false, data:[] });
-  const [dashRecords, setDashRecords] = useState([]);
   const [listMap, setListMap] = useState({ open:false, rec:null });
 
   const isAdmin = user?.role === "admin";
@@ -156,11 +155,7 @@ function App(){
     reader.readAsText(file, 'UTF-8');
   };
 
-  const openDashboard = async () => {
-    if(!isAdmin) return;
-    try { setDashRecords(await api.listRecordsFull()); setView("dashboard"); }
-    catch(e){ toast(e.message,"err"); }
-  };
+  const openDashboard = () => { if(isAdmin) setView("dashboard"); };   // Dashboard โหลดข้อมูลเอง (เปิดทันที + เลือกช่วงเวลา)
   const openExcel = async () => {
     try { setExcel({ open:true, data: await api.listRecordsFull() }); }
     catch(e){ toast(e.message,"err"); }
@@ -208,7 +203,7 @@ function App(){
           onOpenDashboard={openDashboard} onOpenUsers={openUsers} onSeedByOrg={seedByOrg} onClearAll={clearAll} onOpenExcel={openExcel}
         />
       ) : view==='dashboard' ? (
-        <Dashboard records={dashRecords} onBack={()=>setView("list")} onEdit={editRecord} />
+        <Dashboard onBack={()=>setView("list")} onEdit={editRecord} />
       ) : view==='users' ? (
         <UserManagement currentUser={user} onBack={()=>setView("list")} />
       ) : view==='form' && current ? (

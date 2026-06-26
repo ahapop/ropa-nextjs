@@ -32,6 +32,7 @@ header.top .hdr-note{font-size:11px;color:#dceaff;opacity:.8;margin-top:3px}
 .toolbar .search{flex:1;min-width:220px;max-width:420px;position:relative}
 .toolbar .search input{width:100%;padding:9px 12px 9px 34px;border:1px solid var(--line);border-radius:8px;font-family:inherit;font-size:14px}
 .toolbar .search svg{position:absolute;left:10px;top:9px;opacity:.5}
+.tb-range{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 .tb-actions{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;justify-content:flex-end}
 .tb-group{display:flex;flex-direction:column;gap:5px;background:#eef3fb;border:1px solid var(--line);border-radius:10px;padding:5px 7px}
 .tb-label{font-size:10px;font-weight:700;letter-spacing:.02em;color:var(--muted);padding-left:3px;line-height:1}
@@ -188,6 +189,11 @@ tbody tr.group-sub3 td{padding:5px 14px;color:var(--text);font-size:13px;border-
 .heat-tbl th,.heat-tbl td{border:1px solid var(--line);padding:5px 6px;text-align:center;white-space:nowrap}
 .heat-tbl th{background:#eef3fb;color:var(--primary-dark)}
 .heat-tbl th:first-child,.heat-tbl td:first-child{text-align:left;max-width:240px;overflow:hidden;text-overflow:ellipsis}
+/* Dashboard: ตารางพอดีเนื้อหา (fit) + ลากปรับกว้าง/ยาวเองได้ (มุมขวาล่าง) */
+.dz{display:inline-block;max-width:100%;overflow:auto;resize:both;vertical-align:top;border:1px solid var(--line);border-radius:8px}
+.dz table{width:auto;min-width:100%;margin:0}
+.dz th,.dz td{white-space:nowrap}
+.dz .heat-tbl td:first-child,.dz .heat-tbl th:first-child{max-width:none}
 .actgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:6px}
 .actchip{font-size:12px;padding:6px 9px;border-radius:7px;border:1px solid var(--line);display:flex;align-items:center;gap:6px;line-height:1.25}
 .actchip.has{background:#e9f7ef;border-color:#bfe6cd;color:#1d7a43}

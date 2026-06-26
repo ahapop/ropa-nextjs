@@ -2,6 +2,8 @@
 import { useState, useRef, useMemo, useEffect, Fragment } from "react";
 import { recName, actDisplay } from "@/lib/util";
 import { MASTER, DIVISION_SECTIONS } from "@/lib/master";
+import { rangeToEpoch, inRange } from "@/lib/daterange";
+import RangeFilter from "./RangeFilter";
 
 const PAGE_SIZE = 50;
 const SEP = "";
@@ -49,12 +51,16 @@ export default function RecordList(props){
   const [collapsed, setCollapsed] = useState(() => new Set());
   const [colW, setColW] = useState(() => new Array(COLS.length).fill(null));
   const [page, setPage] = useState(0);
+  const [now] = useState(()=>Date.now());
+  const [dateRange, setDateRange] = useState({ preset:'year', from:'', to:'' });   // ค่าเริ่มต้น "ปีนี้"
   const fileRef = useRef(null);
   const draggingRef = useRef(false);
 
+  const rng = useMemo(()=> rangeToEpoch(dateRange, now), [dateRange.preset, dateRange.from, dateRange.to, now]);
   const rows = useMemo(() => {
     const f = filter.trim().toLowerCase();
     let list = records.filter(r => {
+      if(!inRange(r.updatedTs, rng)) return false;   // กรองตามช่วงเวลา (ปรับปรุงล่าสุด)
       if(!f) return true;
       const hay = [r.s1?.activity, r.s1?.activityOther, r.s1?.org, r.company, r.department, recName(r)].join(' ').toLowerCase();
       return hay.includes(f);
@@ -67,7 +73,7 @@ export default function RecordList(props){
       });
     }
     return list;
-  }, [records, filter, sortKey, sortDir]);
+  }, [records, filter, sortKey, sortDir, rng]);
 
   // เลขลำดับ "ถาวร" ตามลำดับการสร้าง (เพิ่มก่อน = 1) — ไม่เปลี่ยนเมื่อ sort/filter/แบ่งหน้า
   const seqOf = useMemo(() => {
@@ -97,7 +103,7 @@ export default function RecordList(props){
     });
   }, [rows, groupBy]);
 
-  useEffect(() => { setPage(0); }, [filter, sortKey, sortDir, groupBy, records.length]);
+  useEffect(() => { setPage(0); }, [filter, sortKey, sortDir, groupBy, records.length, rng]);
   const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages - 1);
   const pageRows = rows.slice(safePage * PAGE_SIZE, safePage * PAGE_SIZE + PAGE_SIZE);
@@ -167,6 +173,7 @@ export default function RecordList(props){
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
           <input type="text" value={filter} onChange={e=>setFilter(e.target.value)} placeholder="ค้นหา: กิจกรรม / ฝ่าย / ผู้บันทึก ..." />
         </div>
+        <div className="tb-range"><RangeFilter range={dateRange} setRange={setDateRange} /><span className="muted">{rows.length} รายการ</span></div>
         <div className="tb-actions">
           <div className="tb-group">
             <span className="tb-label">มุมมอง</span>

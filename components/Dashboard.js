@@ -6,6 +6,8 @@ import { recordComplete } from "@/lib/validate";
 import { analyze, buildWorklist } from "@/lib/analytics";
 import { buildSheetsXlsx } from "@/lib/xlsx";
 import { api } from "@/lib/api-client";
+import { rangeToEpoch } from "@/lib/daterange";
+import RangeFilter from "./RangeFilter";
 import { useToast } from "./toast";
 
 /* ---------- helpers ---------- */
@@ -47,7 +49,7 @@ function dl(bytes, filename){
 // ไล่เฉดแดงตามความหนาแน่น (heatmap)
 function heatBg(v, max){ if(!v) return "transparent"; const t = Math.min(1, v/Math.max(1,max)); return `rgba(217,83,79,${0.10 + t*0.55})`; }
 
-export default function Dashboard({ records, onBack, onEdit }){
+export default function Dashboard({ onBack, onEdit }){
   const toast = useToast();
   const [comp, setComp] = useState("");
   const [now] = useState(()=>Date.now());
@@ -57,9 +59,24 @@ export default function Dashboard({ records, onBack, onEdit }){
   const [gapPage, setGapPage] = useState(0);
   const [recPage, setRecPage] = useState(0);
   const [progPage, setProgPage] = useState(0);
+  const [records, setRecords] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loaded, setLoaded] = useState(false);
+  const [range, setRange] = useState({ preset:"year", from:"", to:"" });   // ค่าเริ่มต้น "ปีนี้"
 
   useEffect(()=>{ (async()=>{ try{ setSnaps(await api.snapshots(120)); }catch{} })(); }, []);
   useEffect(()=>{ setWlPage(0); setGapPage(0); setRecPage(0); setProgPage(0); }, [comp]); // รีเซ็ตหน้าเมื่อเปลี่ยนบริษัท
+  // โหลดข้อมูลตามช่วงเวลา (server-side filter) — Dashboard เปิดทันที แล้วค่อยโหลด
+  useEffect(()=>{
+    const r = rangeToEpoch(range, now);
+    if(r === "skip") return;   // custom ยังไม่เลือกวันที่ — ยังไม่ยิง query (กันโหลดทั้งหมดโดยไม่ตั้งใจ)
+    let cancelled=false; (async()=>{
+      setLoading(true);
+      try { const data = await api.listRecordsFull(r); if(!cancelled) setRecords(data); }
+      catch(e){ if(!cancelled) toast(e.message,"err"); }
+      finally { if(!cancelled){ setLoading(false); setLoaded(true); } }
+    })(); return ()=>{ cancelled=true; };
+  }, [range.preset, range.from, range.to]);
 
   const R = useMemo(()=> records.filter(r=>!comp || r.company===comp), [records, comp]);
   const d = useMemo(()=> analyze(R, { now, company:comp, allRecords:records }), [R, now, comp, records]);
@@ -107,6 +124,8 @@ export default function Dashboard({ records, onBack, onEdit }){
             <option value="">ทุกบริษัท</option>
             {MASTER.companies.map(c=><option key={c} value={c}>{c}</option>)}
           </select>
+          <RangeFilter range={range} setRange={setRange} />
+          <span className="muted" style={{ minWidth:96 }}>{loading ? "⏳ กำลังโหลด…" : (records.filter(r=>!comp||r.company===comp).length+" รายการ")}</span>
           <button className="btn btn-ghost btn-sm" disabled={busy} onClick={()=>exportReport("daily")}>📄 รายวัน</button>
           <button className="btn btn-ghost btn-sm" disabled={busy} onClick={()=>exportReport("weekly")}>📄 รายสัปดาห์</button>
           <button className="btn btn-ghost btn-sm" disabled={busy} onClick={()=>exportReport("monthly")}>📄 รายเดือน</button>
@@ -115,6 +134,7 @@ export default function Dashboard({ records, onBack, onEdit }){
         </div>
       </div>
 
+      {!loaded ? <div className="empty">⏳ กำลังโหลดข้อมูล Dashboard…</div> : (<>
       {/* ===== Alerts ===== */}
       {d.alerts.length > 0 && (
         <div className="alert-banner">
@@ -181,14 +201,14 @@ export default function Dashboard({ records, onBack, onEdit }){
       {!comp && d.riskByCompany.length>0 && (
         <div className="dcard" style={{ marginBottom:14, overflowX:"auto" }}>
           <h3>ความเสี่ยงราย บริษัท × ประเภท (heatmap)</h3>
-          <table className="heat-tbl">
+          <div className="dz"><table className="heat-tbl">
             <thead><tr><th>บริษัท</th>{riskKeys.map(k=><th key={k} title={d.riskLabels[k]}>{d.riskLabels[k].split(" (")[0]}</th>)}</tr></thead>
             <tbody>{d.riskByCompany.map(row=>{
               const mx = Math.max(1, ...riskKeys.map(k=>row[k]||0));
               return <tr key={row.company}><td><b>{row.company}</b> <span className="muted">({row.total})</span></td>
                 {riskKeys.map(k=><td key={k} style={{ background:heatBg(row[k]||0, mx) }}>{row[k]||0}</td>)}</tr>;
             })}</tbody>
-          </table>
+          </table></div>
         </div>
       )}
 
@@ -198,7 +218,7 @@ export default function Dashboard({ records, onBack, onEdit }){
           {d.riskItems.length>0 && <button className="btn btn-ghost btn-sm" onClick={exportWorklist}>⬇ Export Worklist</button>}
         </h3>
         {d.riskItems.length ? (<>
-          <table>
+          <div className="dz"><table>
             <thead><tr><th>กิจกรรม / หน่วยงาน</th><th>ข้อสังเกต</th><th style={{ width:110 }}>จัดการ</th></tr></thead>
             <tbody>{wl.slice.map((x,k)=>(
               <tr key={wl.page+"-"+k}>
@@ -207,7 +227,7 @@ export default function Dashboard({ records, onBack, onEdit }){
                 <td><button className="btn btn-ghost btn-sm" onClick={()=>onEdit(x.r.id)}>✎ เปิดแก้</button></td>
               </tr>
             ))}</tbody>
-          </table>
+          </table></div>
           <Pager page={wl.page} pages={wl.pages} total={d.riskItems.length} set={setWlPage} />
         </>) : <div className="muted" style={{ padding:8 }}>ไม่พบความเสี่ยง 🎉</div>}
       </div>
@@ -250,14 +270,14 @@ export default function Dashboard({ records, onBack, onEdit }){
         <div className="dcard" style={{ overflowX:"auto" }}>
           <h3>ความไม่สมบูรณ์ราย ฝ่าย × ขั้นตอน (heatmap จำนวนที่ยังไม่ครบ)</h3>
           {d.stepHeat.length ? (
-            <table className="heat-tbl">
+            <div className="dz"><table className="heat-tbl">
               <thead><tr><th>ฝ่าย</th>{STEPS.map((s,i)=><th key={i} title={s.title}>{i+1}</th>)}</tr></thead>
               <tbody>{d.stepHeat.map(row=>{
                 const mx = Math.max(1, ...row.steps);
                 return <tr key={row.div}><td title={row.div}>{row.div} <span className="muted">({row.total})</span></td>
                   {row.steps.map((v,i)=><td key={i} style={{ background:heatBg(v, mx) }}>{v||""}</td>)}</tr>;
               })}</tbody>
-            </table>
+            </table></div>
           ) : <div className="muted" style={{ padding:8 }}>ไม่มีข้อมูล</div>}
         </div>
       </div>
@@ -278,32 +298,33 @@ export default function Dashboard({ records, onBack, onEdit }){
         <div className="dcard">
           <h3>กิจกรรมล่าสุด</h3>
           {d.recent.length ? (<>
-            <table>
+            <div className="dz"><table>
               <thead><tr><th>กิจกรรม</th><th>บริษัท</th><th>ผู้บันทึก</th><th>ปรับปรุง</th><th style={{ width:80 }}>สถานะ</th></tr></thead>
               <tbody>{rc.slice.map(r=>{ const rej=r.status==='rejected', done=recordComplete(r);
                 return <tr key={r.id}><td><b>{actName(r)}</b></td><td>{r.company||'-'}</td><td>{recName(r)||'-'}</td>
                   <td className="muted">{r.updatedAt||'-'}</td>
                   <td><span className={"badge "+(rej?'rejected':(done?'done':'draft'))}>{rej?'ตีกลับ':(done?'สมบูรณ์':'ร่าง')}</span></td></tr>;
               })}</tbody>
-            </table>
+            </table></div>
             <Pager page={rc.page} pages={rc.pages} total={d.recent.length} set={setRecPage} />
           </>) : <div className="muted" style={{ padding:8 }}>ยังไม่มีรายการ</div>}
         </div>
         <div className="dcard">
           <h3>ฝ่ายที่ต้องเร่ง (ความคืบหน้าต่ำ / เงียบนาน)</h3>
           {d.orgProgress.length ? (<>
-            <table>
+            <div className="dz"><table>
               <thead><tr><th>ฝ่าย/ส่วน</th><th style={{ width:70 }}>สมบูรณ์</th><th style={{ width:90 }}>นิ่งมา</th></tr></thead>
               <tbody>{pr.slice.map((p,i)=>(
                 <tr key={pr.page+"-"+i}><td title={p.division}>{p.org}</td>
                   <td><span className="pill amber">{p.pct}%</span> <span className="muted">{p.complete}/{p.total}</span></td>
                   <td>{p.idleDays==null?"-":(p.idleDays+" วัน")}{p.idleDays>30 && " 🔴"}</td></tr>
               ))}</tbody>
-            </table>
+            </table></div>
             <Pager page={pr.page} pages={pr.pages} total={d.orgProgress.length} set={setProgPage} />
           </>) : <div className="muted" style={{ padding:8 }}>ไม่มีข้อมูล</div>}
         </div>
       </div>
+      </>)}
     </div>
   );
 }

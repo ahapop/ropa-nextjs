@@ -13,8 +13,13 @@ export async function GET(req){
   try {
     const u = await requireUser();
     const scope = scopeOf(u);
-    const full = new URL(req.url).searchParams.get("full");
-    const records = full ? await listRecordsFull(scope) : await listSummaries(scope);
+    const sp = new URL(req.url).searchParams;
+    const full = sp.get("full");
+    const fn = Number(sp.get("from")), tn = Number(sp.get("to"));
+    const from = sp.get("from") && Number.isFinite(fn) ? fn : null;
+    const to   = sp.get("to")   && Number.isFinite(tn) ? tn : null;
+    const range = (from != null || to != null) ? { from, to } : null;
+    const records = full ? await listRecordsFull(scope, range) : await listSummaries(scope);
     return NextResponse.json({ records });
   } catch(e){ return err(e); }
 }
