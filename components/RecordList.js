@@ -159,28 +159,40 @@ export default function RecordList(props){
           <input type="text" value={filter} onChange={e=>setFilter(e.target.value)} placeholder="ค้นหา: กิจกรรม / ฝ่าย / ผู้บันทึก ..." />
         </div>
         <div className="tb-actions">
-          <div className="tb-group" data-label="มุมมอง">
-            <button className={"btn btn-sm " + (groupBy==='company' ? "btn-primary" : "btn-ghost")}
-                    onClick={()=>setGroup('company')} title="จัดกลุ่มตามบริษัท (เริ่มแบบยุบ)">🏢 ตามบริษัท</button>
-            <button className={"btn btn-sm " + (groupBy==='division' ? "btn-primary" : "btn-ghost")}
-                    onClick={()=>setGroup('division')} title="จัดกลุ่มตามฝ่าย (เริ่มแบบยุบ)">📁 ตามฝ่าย</button>
-            {tableLayout==='fixed' && <button className="btn btn-ghost btn-sm" onClick={resetWidths} title="คืนความกว้างคอลัมน์อัตโนมัติ">↔ รีเซ็ตคอลัมน์</button>}
+          <div className="tb-group">
+            <span className="tb-label">มุมมอง</span>
+            <div className="tb-row">
+              <button className={"btn btn-sm " + (groupBy==='company' ? "btn-primary" : "btn-ghost")}
+                      onClick={()=>setGroup('company')} title="จัดกลุ่มตามบริษัท (เริ่มแบบยุบ)">🏢 ตามบริษัท</button>
+              <button className={"btn btn-sm " + (groupBy==='division' ? "btn-primary" : "btn-ghost")}
+                      onClick={()=>setGroup('division')} title="จัดกลุ่มตามฝ่าย (เริ่มแบบยุบ)">📁 ตามฝ่าย</button>
+              {tableLayout==='fixed' && <button className="btn btn-ghost btn-sm" onClick={resetWidths} title="คืนความกว้างคอลัมน์อัตโนมัติ">↔ รีเซ็ตคอลัมน์</button>}
+            </div>
           </div>
-          <div className="tb-group" data-label="นำเข้า / ส่งออก">
-            <button className="btn btn-ghost btn-sm" onClick={onSaveXML}>💾 Save XML</button>
-            <button className="btn btn-ghost btn-sm" onClick={()=>fileRef.current?.click()}>📂 โหลด XML</button>
-            <button className="btn btn-ghost btn-sm" onClick={onExportJSON}>⬇ JSON</button>
-            <button className="btn btn-ghost btn-sm" onClick={onOpenExcel} title="ส่งออกเป็น Excel ตามรูปแบบ ROPA — เลือกบริษัท/ฝ่ายได้">⬇ Excel</button>
+          <div className="tb-group">
+            <span className="tb-label">นำเข้า / ส่งออก</span>
+            <div className="tb-row">
+              <button className="btn btn-ghost btn-sm" onClick={onSaveXML}>💾 Save XML</button>
+              <button className="btn btn-ghost btn-sm" onClick={()=>fileRef.current?.click()}>📂 โหลด XML</button>
+              <button className="btn btn-ghost btn-sm" onClick={onExportJSON}>⬇ JSON</button>
+              <button className="btn btn-ghost btn-sm" onClick={onOpenExcel} title="ส่งออกเป็น Excel ตามรูปแบบ ROPA — เลือกบริษัท/ฝ่ายได้">⬇ Excel</button>
+            </div>
           </div>
           {isAdmin && (
-            <div className="tb-group" data-label="ผู้ดูแล">
-              <button className="btn btn-ghost btn-sm" onClick={onOpenDashboard}>📊 Dashboard</button>
-              <button className="btn btn-ghost btn-sm" onClick={onOpenUsers} title="จัดการผู้ใช้ (เฉพาะ Admin)">👥 จัดการผู้ใช้</button>
+            <div className="tb-group">
+              <span className="tb-label">ผู้ดูแล</span>
+              <div className="tb-row">
+                <button className="btn btn-ghost btn-sm" onClick={onOpenDashboard}>📊 Dashboard</button>
+                <button className="btn btn-ghost btn-sm" onClick={onOpenUsers} title="จัดการผู้ใช้ (เฉพาะ Admin)">👥 จัดการผู้ใช้</button>
+              </div>
             </div>
           )}
-          <div className="tb-group" data-label="ข้อมูล">
-            <button className="btn btn-ghost btn-sm" onClick={onSeedByOrg} title="สร้างข้อมูลตัวอย่าง 20 รายการต่อ ฝ่าย/ส่วน (~2,400 รายการ) ของบัญชีคุณ">🧪 20/ฝ่าย-ส่วน</button>
-            <button className="btn btn-ghost btn-sm" onClick={onClearAll} title="ลบรายการทั้งหมด">🗑 ล้างทั้งหมด</button>
+          <div className="tb-group">
+            <span className="tb-label">ข้อมูล</span>
+            <div className="tb-row">
+              <button className="btn btn-ghost btn-sm" onClick={onSeedByOrg} title="สร้างข้อมูลตัวอย่าง 20 รายการต่อ ฝ่าย/ส่วน (~2,400 รายการ) ของบัญชีคุณ">🧪 20/ฝ่าย-ส่วน</button>
+              <button className="btn btn-ghost btn-sm" onClick={onClearAll} title="ลบรายการทั้งหมด">🗑 ล้างทั้งหมด</button>
+            </div>
           </div>
           <button className="btn btn-primary" onClick={onNew}>＋ เพิ่มรายการใหม่</button>
           <input type="file" ref={fileRef} accept=".xml,application/xml,text/xml" className="hidden"
