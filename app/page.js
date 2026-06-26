@@ -13,6 +13,7 @@ import { blankRecord, clone, uid, nowStr, recName, migrateS3, migrateS4, migrate
 import { recordComplete } from "@/lib/validate";
 import { buildXML, parseXML } from "@/lib/xmlio";
 import { api, initials } from "@/lib/api-client";
+import { companyOf } from "@/lib/access";
 
 function App(){
   const toast = useToast();
@@ -215,7 +216,7 @@ function App(){
                 onExit={()=>setView("list")} onUpsert={upsert} onFinish={finishRecord} />
       ) : null}
 
-      <RecorderModal open={newRec.open} recorder={newRec.base?.recorder}
+      <RecorderModal open={newRec.open} recorder={newRec.base?.recorder} company={isAdmin ? null : companyOf(user)}
                      onCancel={()=>setNewRec({ open:false, base:null })} onSave={onNewRecorder} />
       <ExcelModal open={excel.open} records={excel.data} onCancel={()=>setExcel({ open:false, data:[] })} />
       <DataMapModal open={listMap.open} rec={listMap.rec} onClose={()=>setListMap({ open:false, rec:null })} />

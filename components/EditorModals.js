@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { Modal, ModalHead, ModalFoot } from "./ui";
 import { useToast } from "./toast";
 import { RadioF, SelectF, TextF, ChecksF } from "./fields";
-import { MASTER } from "@/lib/master";
+import { MASTER, orgsForCompany } from "@/lib/master";
 import { getDeep, setDeep, clone, blankS3Item, blankS6Item, blankS4Item } from "@/lib/util";
 import { emptyEditorFids } from "@/lib/stepvalid";
 
@@ -54,7 +54,7 @@ export function S6Editor({ open, item, index, existingItems, onCancel, onSave })
   );
 }
 
-export function S3Editor({ open, item, index, existingItems, onCancel, onSave }){
+export function S3Editor({ open, item, index, existingItems, company, onCancel, onSave }){
   const toast = useToast();
   const st = useEditState("s3edit", item || blankS3Item(), open);
   if(!open) return null;
@@ -76,7 +76,7 @@ export function S3Editor({ open, item, index, existingItems, onCancel, onSave })
       <ModalHead title={index>=0 ? "แก้ไขฝ่ายงานที่แบ่งปันข้อมูล" : "เพิ่มฝ่ายงานที่แบ่งปันข้อมูล"}
                  sub="1 ฝ่ายงาน (3.1) ต่อ 1 รายการ พร้อมรายละเอียด 3.2–3.6 ของฝ่ายงานนั้น" />
       <div style={{ padding:"18px 22px", overflow:"auto" }}>
-        <SelectF fid="s3edit.org" label="3.1 ฝ่ายงาน / ส่วนงาน ที่ใช้ข้อมูลส่วนบุคคล" options={MASTER.orgStructure} req hint="เลือก 1 ฝ่ายงาน (ดึงจากฐานข้อมูลโครงสร้างบริษัทฯ)" {...p} />
+        <SelectF fid="s3edit.org" label="3.1 ฝ่ายงาน / ส่วนงาน ที่ใช้ข้อมูลส่วนบุคคล" options={orgsForCompany(company)} req hint="เลือก 1 ฝ่ายงาน (ดึงจากฐานข้อมูลโครงสร้างบริษัทฯ)" {...p} />
         <TextF fid="s3edit.purpose" label="3.2 วัตถุประสงค์ในการประมวลผล" req area hint="หากเลือก 3.1 ต้องกรอก 3.2" {...p} />
         <ChecksF fid="s3edit.general" label="3.3 ข้อมูลส่วนบุคคลทั่วไป" options={MASTER.generalData} hint="ต้องเลือก 3.3 หรือ 3.4 อย่างน้อย 1 รายการ" {...p} />
         <ChecksF fid="s3edit.sensitive" label="3.4 ข้อมูลส่วนบุคคลอ่อนไหว" options={MASTER.sensitiveData} hint="ถ้าเลือกข้อนี้ ต้องระบุฐานกฎหมายอ่อนไหว (3.6) ด้วย" {...p} />

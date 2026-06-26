@@ -2,9 +2,9 @@
 import { useState, useEffect } from "react";
 import { Modal, ModalHead, ModalFoot } from "./ui";
 import { useToast } from "./toast";
-import { DIVISIONS, SECTIONS, sectionsFor } from "@/lib/master";
+import { sectionsFor, divisionsForCompany, sectionsForCompany } from "@/lib/master";
 
-export default function RecorderModal({ open, recorder, onCancel, onSave }){
+export default function RecorderModal({ open, recorder, company, onCancel, onSave }){
   const toast = useToast();
   const [r, setR] = useState({ firstName:"", lastName:"", position:"", phone:"", division:"", section:"" });
   useEffect(() => { if(open) setR({ firstName:"", lastName:"", position:"", phone:"", division:"", section:"", ...(recorder||{}) }); }, [open, recorder]);
@@ -16,7 +16,8 @@ export default function RecorderModal({ open, recorder, onCancel, onSave }){
     const section = !v ? s.section : (secs.includes(s.section) ? s.section : "");
     return { ...s, division:v, section };
   });
-  const sectionOptions = r.division ? sectionsFor(r.division) : SECTIONS;
+  const divisionOptions = divisionsForCompany(company);
+  const sectionOptions = r.division ? sectionsFor(r.division) : sectionsForCompany(company);
   const save = () => {
     if(!r.firstName.trim() || !r.lastName.trim()){ toast("กรุณากรอก ชื่อ และ นามสกุล ของผู้บันทึก","err"); return; }
     onSave({ firstName:r.firstName.trim(), lastName:r.lastName.trim(), position:r.position.trim(), phone:r.phone.trim(), division:r.division, section:r.section });
@@ -41,7 +42,7 @@ export default function RecorderModal({ open, recorder, onCancel, onSave }){
           <div className="field"><label>ฝ่าย</label>
             <select value={r.division} onChange={e=>setDivision(e.target.value)}>
               <option value="">— เลือกฝ่าย —</option>
-              {DIVISIONS.map((o,i)=><option key={i} value={o}>{o}</option>)}
+              {divisionOptions.map((o,i)=><option key={i} value={o}>{o}</option>)}
             </select></div>
           <div className="field"><label>ส่วน{r.division && <span className="hint" style={{ display:"inline", marginLeft:6 }}>(เฉพาะส่วนในฝ่ายที่เลือก)</span>}</label>
             <select value={r.section} onChange={e=>upd('section', e.target.value)} disabled={!!r.division && sectionOptions.length===0}>

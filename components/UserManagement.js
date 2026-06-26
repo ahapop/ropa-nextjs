@@ -2,7 +2,8 @@
 import { useState, useEffect } from "react";
 import { useToast } from "./toast";
 import { Modal, ModalHead, ModalFoot } from "./ui";
-import { DIVISIONS, sectionsFor, SECTIONS } from "@/lib/master";
+import { sectionsFor, divisionsForCompany, sectionsForCompany } from "@/lib/master";
+import { companyOf } from "@/lib/access";
 import { api } from "@/lib/api-client";
 
 const BLANK = { email:"", name:"", title:"", division:"", section:"", department:"", role:"user", password:"" };
@@ -15,7 +16,9 @@ function UserModal({ open, editing, onCancel, onSaved }){
   if(!open) return null;
   const upd = (k,v) => setF(s => ({ ...s, [k]:v }));
   const setDivision = (v) => setF(s => ({ ...s, division:v, section: sectionsFor(v).includes(s.section) ? s.section : "" }));
-  const sectionOptions = f.division ? sectionsFor(f.division) : SECTIONS;
+  const company = companyOf({ email: f.email });
+  const divisionOptions = divisionsForCompany(company);
+  const sectionOptions = f.division ? sectionsFor(f.division) : sectionsForCompany(company);
   const save = async () => {
     if(!editing && !f.email.trim()){ toast("กรุณาระบุอีเมล","err"); return; }
     if(!editing && !f.password.trim()){ toast("กรุณาระบุรหัสผ่าน","err"); return; }
@@ -46,7 +49,7 @@ function UserModal({ open, editing, onCancel, onSaved }){
           <div className="field"><label>ฝ่าย</label>
             <select value={f.division} onChange={e=>setDivision(e.target.value)}>
               <option value="">— เลือกฝ่าย —</option>
-              {DIVISIONS.map((o,i)=><option key={i} value={o}>{o}</option>)}
+              {divisionOptions.map((o,i)=><option key={i} value={o}>{o}</option>)}
             </select></div>
           <div className="field"><label>ส่วน{f.division && <span className="hint" style={{ display:"inline", marginLeft:6 }}>(เฉพาะในฝ่ายที่เลือก)</span>}</label>
             <select value={f.section} onChange={e=>upd('section', e.target.value)} disabled={!!f.division && sectionOptions.length===0}>

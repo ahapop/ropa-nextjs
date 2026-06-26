@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { MASTER, STEPS, STEP_DESC } from "@/lib/master";
+import { MASTER, STEPS, STEP_DESC, orgsForCompany } from "@/lib/master";
 import { getDeep, setDeep, clone, recName, nowStr, blankS3Item, blankS6Item, blankS4Item } from "@/lib/util";
 import { isStepComplete, EXTRA_RULES } from "@/lib/validate";
 import { emptyRequiredFids } from "@/lib/stepvalid";
@@ -184,7 +184,7 @@ export default function Wizard({ current, setCurrent, isAdmin, onExit, onUpsert,
       <div style={{ fontWeight:700, color:"var(--primary-dark)", marginBottom:12 }}>ข้อมูลองค์กร</div>
       <SelectF fid="company" label="บริษัทต้นสังกัด (Company)" options={MASTER.companies} req {...p} />
     </div>
-    <SelectF fid="s1.org" label="1.1 ผู้อำนวยการ / ฝ่าย / ส่วน" options={MASTER.orgStructure} req hint="ดึง Auto จากฐานข้อมูลโครงสร้างบริษัทฯ" {...p} />
+    <SelectF fid="s1.org" label="1.1 ผู้อำนวยการ / ฝ่าย / ส่วน" options={orgsForCompany(get('company'))} req hint="ดึง Auto จากฐานข้อมูลโครงสร้างบริษัทฯ" {...p} />
     <SelectF fid="s1.activity" label="1.2 กิจกรรมการประมวลข้อมูลส่วนบุคคล" options={[...MASTER.activities,'อื่นๆ']} req hint="ดึงจากชีท “กิจกรรมการประมวลข้อมูลส่วนบุคคล”" {...p} />
     <TextF fid="s1.responsible" label="1.4 ผู้ที่มีหน้าที่รับผิดชอบ" req {...p} />
     <ChecksF fid="s1.recordFormat" label="1.5 รูปแบบการบันทึก" options={MASTER.recordFormats} req hint="ดึงจากชีท “รูปแบบการบันทึก”" {...p} />
@@ -316,13 +316,13 @@ export default function Wizard({ current, setCurrent, isAdmin, onExit, onUpsert,
         </section>
       </div>
 
-      <S3Editor open={s3ed.open} item={s3ed.item} index={s3ed.index} existingItems={current.s3?.items||[]}
+      <S3Editor open={s3ed.open} item={s3ed.item} index={s3ed.index} existingItems={current.s3?.items||[]} company={get('company')}
                 onCancel={()=>setS3ed({ open:false, index:-1, item:null })} onSave={saveS3} />
       <S4Editor open={s4ed.open} item={s4ed.item} index={s4ed.index} existingItems={current.s4?.items||[]}
                 onCancel={()=>setS4ed({ open:false, index:-1, item:null })} onSave={saveS4} />
       <S6Editor open={s6ed.open} item={s6ed.item} index={s6ed.index} existingItems={current.s6?.items||[]}
                 onCancel={()=>setS6ed({ open:false, index:-1, item:null })} onSave={saveS6} />
-      <RecorderModal open={recEdit} recorder={current.recorder}
+      <RecorderModal open={recEdit} recorder={current.recorder} company={get('company')}
                      onCancel={()=>setRecEdit(false)}
                      onSave={(rec)=>{ setCurrent(prev=>({ ...prev, recorder:rec })); setRecEdit(false); }} />
       <DataMapModal open={mapOpen} rec={current} onClose={()=>setMapOpen(false)} />
