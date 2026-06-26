@@ -93,31 +93,11 @@ function App(){
     catch(e){ toast(e.message,"err"); }
   };
   const seedByOrg = async () => {
-    const company = companyOf(user);
-    if(!company){ toast('ไม่ทราบบริษัทของบัญชีคุณ (โดเมนอีเมล)','err'); return; }
-    const { orgsForCompany, DIVISION_SECTIONS } = await import("@/lib/master");
-    const companyOrgs = orgsForCompany(company);                 // ฝ่ายที่บริษัทนี้ "มี" จริง
-    const orgs = companyOrgs.filter(o => o.startsWith("ฝ่าย") || o.startsWith("ส่วน"));
-    const total = orgs.length * 20;
-    if(!confirm(`สร้างข้อมูลตัวอย่าง 20 รายการต่อ ฝ่าย/ส่วน ของบริษัท ${company} (~${total} รายการ) เป็นของบัญชีคุณ?\n(อาจใช้เวลาสักครู่)`)) return;
+    if(!confirm('สร้างข้อมูลจำลองครบทุกบริษัท (BTSC / BID / EBM / NBM) ~3,500 รายการ?\nเจ้าของเป็น user รายฝ่ายของแต่ละบริษัท · ข้อมูลจะถูกเพิ่มเข้าไป (กดซ้ำเพื่อเพิ่มได้)')) return;
     try {
-      const { makeDummyByOrg } = await import("@/lib/dummy");
-      const pick = a => a[Math.floor(Math.random()*a.length)];
-      const sec2div = {}; for(const [d,secs] of Object.entries(DIVISION_SECTIONS)) for(const s of secs) sec2div[s]=d;
-      const all = makeDummyByOrg(20, orgs);
-      for(const r of all){                                       // ทำให้สอดคล้อง: company + org ทุกจุด อยู่ในชุดของบริษัท
-        r.company = company;
-        const org = r.s1?.org || "";
-        if(org.startsWith("ส่วน")){ r.recorder.division = sec2div[org]||""; r.recorder.section = org; }
-        else if(org.startsWith("ฝ่าย")){ r.recorder.division = org; r.recorder.section = ""; }
-        const share = companyOrgs.filter(o => o !== org);
-        r.s3.items = (r.s3?.items||[]).map(it => ({ ...it, org: pick(share.length?share:companyOrgs) }));
-        r.s7.who = "เจ้าหน้าที่ที่ได้รับมอบหมายของ" + pick(companyOrgs);
-      }
-      const CH = 200;
-      for(let i=0;i<all.length;i+=CH){ await api.bulkRecords(all.slice(i, i+CH)); }
+      const count = await api.seedFull();
       await reload();
-      toast(`เพิ่มข้อมูลตัวอย่าง ${all.length} รายการ (${company}) แล้ว ✓`,'ok');
+      toast(`สร้างข้อมูลจำลอง ${count} รายการ (ครบทุกบริษัท) แล้ว ✓`,'ok');
     } catch(e){ toast(e.message,"err"); }
   };
 
