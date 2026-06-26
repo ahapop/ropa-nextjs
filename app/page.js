@@ -31,7 +31,7 @@ function App(){
   const isAdmin = user?.role === "admin";
   // สร้าง summary (ข้อมูลย่อ) จาก record เต็ม สำหรับเก็บใน list state
   const summarize = (r) => ({ id:r.id, company:r.company, status:r.status, complete: recordComplete(r),
-    updatedTs:r.updatedTs, updatedAt:r.updatedAt,
+    updatedTs:r.updatedTs, updatedAt:r.updatedAt, createdAt:r.createdAt,
     s1:{ org:r.s1?.org, activity:r.s1?.activity, activityOther:r.s1?.activityOther }, recorder:r.recorder||{} });
 
   useEffect(() => {

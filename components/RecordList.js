@@ -69,6 +69,14 @@ export default function RecordList(props){
     return list;
   }, [records, filter, sortKey, sortDir]);
 
+  // เลขลำดับ "ถาวร" ตามลำดับการสร้าง (เพิ่มก่อน = 1) — ไม่เปลี่ยนเมื่อ sort/filter/แบ่งหน้า
+  const seqOf = useMemo(() => {
+    const ckey = r => { const t = r.createdAt ? Date.parse(r.createdAt) : NaN; return Number.isFinite(t) ? t : (r.updatedTs || 0); };
+    const ordered = [...records].sort((a,b)=> (ckey(a)-ckey(b)) || String(a.id).localeCompare(String(b.id)));
+    const m = new Map(); ordered.forEach((r,i)=> m.set(r.id, i+1));
+    return m;
+  }, [records]);
+
   // จัดกลุ่มซ้อน 2 ชั้น: 'company' → บริษัท→ฝ่าย · 'division' → ฝ่าย→บริษัท
   const KEYFN = { company: r=>r.company||"", division: r=>orgLevels(r.s1?.org)[0] };
   const sortGroupKeys = (keys, lv) => {
@@ -131,11 +139,12 @@ export default function RecordList(props){
     const act = r.s1?.activity==="อื่นๆ" ? (r.s1?.activityOther||"อื่นๆ") : (r.s1?.activity||"—");
     const rejected = r.status==='rejected';
     const done = !!r.complete;
+    const num = seqOf.get(r.id) || n;   // เลขลำดับถาวรตามการสร้าง
     return (
       <tr key={r.id} className={indent ? "grec" : undefined}>
-        <td>{indent ? "" : n}</td>
+        <td>{indent ? "" : num}</td>
         <td title={act} style={indent ? { paddingLeft: indent } : undefined}>
-          {indent ? <span style={{ opacity:.6, marginRight:5 }}>📄 {n}.</span> : null}<b>{act}</b></td>
+          {indent ? <span style={{ opacity:.6, marginRight:5 }}>📄 {num}.</span> : null}<b>{act}</b></td>
         <td title={r.s1?.org||""}>{r.s1?.org||"—"}</td>
         <td>{r.company||"—"}</td>
         <td title={recName(r)||""}>{recName(r)||"—"}</td>
