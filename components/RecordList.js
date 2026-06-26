@@ -204,7 +204,7 @@ export default function RecordList(props){
             </div>
           )}
           <div className="tb-group">
-            <span className="tb-label">ข้อมูล</span>
+            <span className="tb-label">ข้อมูลจำลอง</span>
             <div className="tb-row">
               <button className="btn btn-ghost btn-sm" onClick={onSeedByOrg} title="สร้างข้อมูลตัวอย่าง 20 รายการต่อ ฝ่าย/ส่วน (~2,400 รายการ) ของบัญชีคุณ">🧪 20/ฝ่าย-ส่วน</button>
               <button className="btn btn-ghost btn-sm" onClick={onClearAll} title="ลบรายการทั้งหมด">🗑 ล้างทั้งหมด</button>
