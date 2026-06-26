@@ -43,8 +43,8 @@ export default function RecordList(props){
   const { records, isAdmin, onNew, onEdit, onDuplicate, onDelete, onOpenDataMap,
           onSaveXML, onImportXML, onExportJSON, onOpenDashboard, onOpenUsers, onSeedByOrg, onClearAll, onOpenExcel } = props;
   const [filter, setFilter] = useState("");
-  const [sortKey, setSortKey] = useState(null);
-  const [sortDir, setSortDir] = useState(1);
+  const [sortKey, setSortKey] = useState('updated');   // เริ่มต้นเรียงตาม "ปรับปรุงล่าสุด" เสมอ
+  const [sortDir, setSortDir] = useState(-1);            // ใหม่สุดอยู่บน
   const [groupBy, setGroupBy] = useState(false);
   const [collapsed, setCollapsed] = useState(() => new Set());
   const [colW, setColW] = useState(() => new Array(COLS.length).fill(null));
